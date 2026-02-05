@@ -100,7 +100,7 @@ export function PlayerController() {
   return (
     <RigidBody 
       ref={body} 
-      position={[0, 5, 0]} 
+      position={[0, 15, 0]} 
       colliders={false} 
       mass={1}
       friction={0.5}
