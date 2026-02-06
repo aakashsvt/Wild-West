@@ -12,6 +12,9 @@ export function Track() {
     const s = scene.clone();
     s.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh;
+
+      console.log("Mesh name:", mesh.name); // 👈 ADD THIS
         child.castShadow = true;
         child.receiveShadow = true;
       }
@@ -20,7 +23,7 @@ export function Track() {
   }, [scene]);
 
   return (
-    <RigidBody type="fixed" colliders="trimesh" friction={1} restitution={0.2}>
+    <RigidBody type="fixed" colliders="trimesh" position={[0, 0, 0]}  friction={1} restitution={0.2}>
       <primitive object={clonedScene} scale={[1, 1, 1]} />
     </RigidBody>
   );

@@ -10,6 +10,7 @@ const ACCELERATION = 80;
 const TURN_SPEED = 3.5;
 const BRAKE_FORCE = 5;
 const JUMP_FORCE = 10; // Simple jump if stuck
+const HEIGHT=5;
 
 export function PlayerController() {
   const body = useRef<RapierRigidBody>(null);
@@ -33,7 +34,8 @@ export function PlayerController() {
 
     const linvel = body.current.linvel();
     const currentSpeed = Math.sqrt(linvel.x ** 2 + linvel.z ** 2);
-    
+    const { x, y, z } = body.current.translation();
+    console.log("location",x, y, z);
     // Update global speed state for HUD
     setSpeed(Math.round(currentSpeed * 2)); // Fake km/h
 
@@ -86,8 +88,8 @@ export function PlayerController() {
     const desiredTarget = posVec.clone().add(targetOffset);
     cameraTarget.current.lerp(desiredTarget, 0.1);
 
-    // Camera position is behind and above the player, based on rotation
-    const camOffset = new Vector3(0, 4, -8).applyEuler(eulerRot);
+ 
+    const camOffset = new Vector3(0, 5, -8).applyEuler(eulerRot);
     const desiredCamPos = posVec.clone().add(camOffset);
     
     // Smooth camera movement
@@ -100,7 +102,7 @@ export function PlayerController() {
   return (
     <RigidBody 
       ref={body} 
-      position={[0, 15, 0]} 
+      position={[ -340, 5.5787,410]} 
       colliders={false} 
       mass={1}
       friction={0.5}
