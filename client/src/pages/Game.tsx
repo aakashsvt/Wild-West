@@ -1,9 +1,11 @@
 import { Canvas } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
+import * as THREE from "three";
 import { KeyboardControls, Environment, OrbitControls, Stars } from "@react-three/drei";
 import { Suspense, useMemo } from "react";
 import { PlayerController } from "@/components/PlayerController";
 import { Track } from "@/components/Track";
+import { Model } from "@/components/Track1";
 import { GameHUD } from "@/components/GameHUD";
 import { GameOverModal } from "@/components/GameOverModal";
 import { useGameStore } from "@/hooks/use-game-store";
@@ -33,24 +35,25 @@ export default function Game() {
       </div>
 
       <KeyboardControls map={keyboardMap}>
-        <Canvas shadows camera={{ position: [0, 5, 10], fov: 60 }}>
+        <Canvas shadows camera={{ position: [0, 5, 10], fov: 60 }} gl={{ outputColorSpace: THREE.SRGBColorSpace }} >
           <Suspense fallback={null}>
-            <Environment preset="sunset" background={false} />
-            <ambientLight intensity={0.5} />
-            <directionalLight 
-              position={[10, 20, 10]} 
-              intensity={1.5} 
-              castShadow 
+            {/* <Environment preset="sunset" background /> */}
+            <ambientLight intensity={1} />
+            <directionalLight
+              position={[10, 70, 10]}
+              intensity={1}
+              castShadow
               shadow-mapSize={[2048, 2048]}
             >
               <orthographicCamera attach="shadow-camera" args={[-50, 50, -50, 50, 0.1, 100]} />
             </directionalLight>
+            {/* 
+            <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} /> */}
 
-            <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
-            
             <Physics gravity={[0, -9.81, 0]}>
               <PlayerController />
               <Track />
+              <Model />
             </Physics>
 
           </Suspense>

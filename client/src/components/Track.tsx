@@ -4,27 +4,38 @@ import { useMemo } from "react";
 import * as THREE from "three";
 
 export function Track() {
-  // Using the path where we expect the file to be moved
   const { scene } = useGLTF("/models/track.glb");
 
-  // Clone the scene to avoid mutation issues if reused
-  const clonedScene = useMemo(() => {
-    const s = scene.clone();
-    s.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-          const mesh = child as THREE.Mesh;
 
-      console.log("Mesh name:", mesh.name); // 👈 ADD THIS
-        child.castShadow = true;
-        child.receiveShadow = true;
+useMemo(() => {
+  scene.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      if (child.name === "EnvironmentSphere") {
+        
+        const mat = child.material as THREE.MeshStandardMaterial;
+        console.log("Original material:", mat);
+        // 🔥 Use emissiveMap instead of map
+        const skyTexture = mat.emissiveMap;
+        
+        if (skyTexture) {
+          child.material = new THREE.MeshBasicMaterial({
+            map: skyTexture,
+            side: THREE.BackSide,
+            depthWrite: false,
+          });
+
+          child.frustumCulled = false;
+          child.renderOrder = -1;
+        }
       }
-    });
-    return s;
-  }, [scene]);
+    }
+  });
+}, [scene]);
+
 
   return (
-    <RigidBody type="fixed" colliders="trimesh" position={[0, 0, 0]}  friction={1} restitution={0.2}>
-      <primitive object={clonedScene} scale={[1, 1, 1]} />
+    <RigidBody type="fixed" colliders="trimesh">
+      <primitive object={scene} />
     </RigidBody>
   );
 }
