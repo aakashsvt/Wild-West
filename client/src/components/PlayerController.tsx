@@ -103,6 +103,7 @@ export function PlayerController() {
     <RigidBody
       ref={body}
       position={[-340, 5.5787, 410]}
+      rotation={[0, 1.396, 0]}
       colliders={false}
       mass={1}
       friction={0.5}
