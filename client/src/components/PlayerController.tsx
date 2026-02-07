@@ -89,7 +89,7 @@ export function PlayerController() {
     cameraTarget.current.lerp(desiredTarget, 0.1);
 
 
-    const camOffset = new Vector3(0, 10, -16).applyEuler(eulerRot);
+    const camOffset = new Vector3(0, 8, -16).applyEuler(eulerRot);
     const desiredCamPos = posVec.clone().add(camOffset);
 
     // Smooth camera movement

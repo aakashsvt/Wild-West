@@ -1,38 +1,74 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, type ScoreInput } from "@shared/routes";
+import { z } from "zod";
+
+// Local schema for scores
+const scoreSchema = z.object({
+  username: z.string().min(2).max(10),
+  score: z.number().int().positive(),
+  timeTaken: z.number().int().nonnegative(),
+  id: z.string(),
+  createdAt: z.number(),
+});
+
+type Score = z.infer<typeof scoreSchema>;
+export type ScoreInput = Omit<Score, "id" | "createdAt">;
+
+const STORAGE_KEY = "wild-west-rider-scores";
+
+function getScoresFromStorage(): Score[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) return [];
+    const scores = JSON.parse(data);
+    return scores.sort((a: Score, b: Score) => b.score - a.score).slice(0, 10);
+  } catch {
+    return [];
+  }
+}
+
+function addScoreToStorage(input: ScoreInput): Score {
+  const score: Score = {
+    ...input,
+    id: Date.now().toString(),
+    createdAt: Date.now(),
+  };
+
+  const scores = getScoresFromStorage();
+  scores.push(score);
+  scores.sort((a, b) => b.score - a.score);
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
+  return score;
+}
 
 export function useScores() {
   return useQuery({
-    queryKey: [api.scores.list.path],
+    queryKey: ["scores"],
     queryFn: async () => {
-      const res = await fetch(api.scores.list.path);
-      if (!res.ok) throw new Error("Failed to fetch leaderboard");
-      return api.scores.list.responses[200].parse(await res.json());
+      // Simulate async operation
+      return new Promise<Score[]>((resolve) => {
+        setTimeout(() => {
+          resolve(getScoresFromStorage());
+        }, 100);
+      });
     },
   });
 }
 
 export function useSubmitScore() {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (data: ScoreInput) => {
-      const res = await fetch(api.scores.create.path, {
-        method: api.scores.create.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      // Simulate async operation
+      return new Promise<Score>((resolve) => {
+        setTimeout(() => {
+          resolve(addScoreToStorage(data));
+        }, 100);
       });
-      
-      if (!res.ok) {
-        if (res.status === 400) {
-           const error = api.scores.create.responses[400].parse(await res.json());
-           throw new Error(error.message);
-        }
-        throw new Error("Failed to submit score");
-      }
-      return api.scores.create.responses[201].parse(await res.json());
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.scores.list.path] });
+      queryClient.invalidateQueries({ queryKey: ["scores"] });
     },
   });
 }
