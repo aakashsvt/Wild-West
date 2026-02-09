@@ -41,10 +41,10 @@ export function Model(props: ModelProps) {
   return (
     <group {...props} dispose={null}>
 
-      <Sky
+      {/* <Sky
         geometry={nodes.EnvironmentSphere.geometry}
         material={materials['Material.013']}
-      />
+      /> */}
 
 
 

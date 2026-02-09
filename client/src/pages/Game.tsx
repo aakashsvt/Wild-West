@@ -41,7 +41,7 @@ export default function Game() {
           toneMappingExposure: 1
         }}>
           <Suspense fallback={null}>
-            <Environment files="/models/Cannon_Exterior.hdr" background={false}
+            <Environment files="/models/Cannon_Exterior.hdr" background={true} blur={0}
             />
             {/* <ambientLight intensity={1} /> */}
             {/* <directionalLight
