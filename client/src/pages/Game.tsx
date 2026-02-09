@@ -35,18 +35,23 @@ export default function Game() {
       </div>
 
       <KeyboardControls map={keyboardMap}>
-        <Canvas shadows camera={{ position: [0, 5, 10], fov: 60 }} gl={{ outputColorSpace: THREE.SRGBColorSpace }} >
+        <Canvas shadows camera={{ position: [0, 5, 10], fov: 60 }} gl={{
+          toneMapping: THREE.LinearToneMapping,   // ✅ Linear mapping
+          outputColorSpace: THREE.SRGBColorSpace,
+          toneMappingExposure: 1
+        }}>
           <Suspense fallback={null}>
-            {/* <Environment preset="sunset" background /> */}
-            <ambientLight intensity={1} />
-            <directionalLight
+            <Environment files="/models/Cannon_Exterior.hdr" background={false}
+            />
+            {/* <ambientLight intensity={1} /> */}
+            {/* <directionalLight
               position={[10, 70, 10]}
               intensity={1}
               castShadow
               shadow-mapSize={[2048, 2048]}
             >
               <orthographicCamera attach="shadow-camera" args={[-50, 50, -50, 50, 0.1, 100]} />
-            </directionalLight>
+            </directionalLight> */}
             {/* 
             <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} /> */}
 

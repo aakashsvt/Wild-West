@@ -84,7 +84,7 @@ export function PlayerController() {
     }
 
     // Camera target is slightly above the player
-    const targetOffset = new Vector3(0, 2, 0);
+    const targetOffset = new Vector3(0, 5, 0);
     const desiredTarget = posVec.clone().add(targetOffset);
     cameraTarget.current.lerp(desiredTarget, 0.1);
 

@@ -27,6 +27,7 @@ function Sky({ geometry, material }: any) {
       <meshBasicMaterial
         map={material.emissiveMap}
         side={2}
+        color={[3, 3, 3]}
         toneMapped={false}
         depthWrite={false}
 
@@ -36,7 +37,7 @@ function Sky({ geometry, material }: any) {
 }
 
 export function Model(props: ModelProps) {
-  const { nodes, materials } = useGLTF('/models/track.glb') as any
+  const { nodes, materials } = useGLTF('/models/RoadTest.glb') as any
   return (
     <group {...props} dispose={null}>
 
@@ -59,4 +60,4 @@ export function Model(props: ModelProps) {
   )
 }
 
-useGLTF.preload('/models/track.glb')
+useGLTF.preload('/models/RoadTest.glb')
