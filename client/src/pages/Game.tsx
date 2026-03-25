@@ -43,8 +43,10 @@ export default function Game() {
           <Suspense fallback={null}>
             <Environment files="/models/Cannon_Exterior.hdr" background={true} blur={0}
             />
-            {/* <ambientLight intensity={1} /> */}
-            {/* <directionalLight
+            {/* <ambientLight intensity={1} />
+
+
+            <directionalLight
               position={[10, 70, 10]}
               intensity={1}
               castShadow

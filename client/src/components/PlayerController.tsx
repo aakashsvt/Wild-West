@@ -5,6 +5,8 @@ import { Vector3, Quaternion, Euler } from "three";
 import { useKeyboardControls } from "@react-three/drei";
 import { useGameStore } from "@/hooks/use-game-store";
 import { Car } from "./Car";
+import { Horse } from "./Horse";
+import { Horse1 } from "./Horse1";
 const MAX_SPEED = 40;
 const ACCELERATION = 80;
 const TURN_SPEED = 3.5;
@@ -13,6 +15,8 @@ const JUMP_FORCE = 10; // Simple jump if stuck
 const HEIGHT = 5;
 
 export function PlayerController() {
+  const horseRef = useRef<any>(null);
+  const currentAction = useRef<any>(null);
   const body = useRef<RapierRigidBody>(null);
   const [subscribeKeys, getKeys] = useKeyboardControls();
   const { setSpeed, addScore, isPlaying } = useGameStore();
@@ -29,6 +33,8 @@ export function PlayerController() {
     if (!body.current || !isPlaying) return;
 
     const { forward, backward, left, right, jump } = getKeys();
+
+
     const impulse = { x: 0, y: 0, z: 0 };
     const torque = { x: 0, y: 0, z: 0 };
 
@@ -45,10 +51,35 @@ export function PlayerController() {
 
     // Movement Logic
     const direction = new Vector3(0, 0, 1).applyEuler(eulerRot);
-
+    if (jump) {
+      playAnimation("JUMP");
+    } else if (forward) {
+      if (left) {
+        playAnimation("RUN_LEFT"); // if exists, else RUN
+      } else if (right) {
+        playAnimation("RUN_RIGHT"); // optional
+      } else {
+        playAnimation("RUN");
+      }
+    } else if (backward) {
+      playAnimation("WALK");
+    } else if (left) {
+      playAnimation("TURN_LEFT");
+    } else if (right) {
+      playAnimation("TURN_RIGHT");
+    } else {
+      if (currentSpeed > 15) {
+        playAnimation("RUN");
+      } else if (currentSpeed > 6) {
+        playAnimation("WALK");
+      } else {
+        playAnimation("IDLE");
+      }
+    }
     if (forward && currentSpeed < MAX_SPEED) {
       impulse.x += direction.x * ACCELERATION * delta;
       impulse.z += direction.z * ACCELERATION * delta;
+
     }
 
     if (backward) {
@@ -99,6 +130,20 @@ export function PlayerController() {
     camera.lookAt(cameraTarget.current);
   });
 
+  const playAnimation = (name: string) => {
+    const actions = horseRef.current?.actions;
+    if (!actions || !actions[name]) return;
+
+    const next = actions[name];
+
+    if (currentAction.current === next) return;
+
+    currentAction.current?.fadeOut(0.2);
+    next.reset().fadeIn(0.2).play();
+
+    currentAction.current = next;
+  };
+
   return (
     <RigidBody
       ref={body}
@@ -115,7 +160,9 @@ export function PlayerController() {
     >
       <CuboidCollider args={[0.5, 0.5, 1.2]} position={[0, 0.5, 0]} />
       {/* Bike Model Placeholder - could be a loaded GLB */}
-      <Car />
+      {/* <Car /> */}
+      {/* <Horse /> */}
+      <Horse1 ref={horseRef} />
       {/* <group>
       
         <mesh position={[0, 0.5, 0]} castShadow>
