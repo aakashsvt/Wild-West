@@ -57,9 +57,8 @@ export default function Game() {
             {/* 
             <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} /> */}
 
-            <Physics gravity={[0, -9.81, 0]}>
+            <Physics gravity={[0, -9.81, 0]} debug={false}>
               <PlayerController />
-              <Track />
               <Model />
             </Physics>
 

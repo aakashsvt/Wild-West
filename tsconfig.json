@@ -8,15 +8,17 @@
     "module": "ESNext",
     "strict": true,
     "lib": ["esnext", "dom", "dom.iterable"],
-    "jsx": "preserve",
-    "esModuleInterop": true,
+    "jsx": "react-jsx",
     "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
     "allowImportingTsExtensions": true,
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "types": ["node", "vite/client"],
     "paths": {
       "@/*": ["./client/src/*"]
-    }
+    },
+    "allowJs": true
   }
 }

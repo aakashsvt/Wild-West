@@ -5,12 +5,72 @@ Command: npx gltfjsx@6.5.3 client/public/models/track.glb
 
 import { useGLTF } from '@react-three/drei'
 import { Group } from 'three'
+import { RigidBody, CuboidCollider } from "@react-three/rapier";
 import { useFrame, useThree } from '@react-three/fiber'
 import { useRef } from 'react'
 import * as THREE from 'three'
-
+import trackPoints from '../../public/models/spline.json'
+const points = trackPoints.map(
+  (p) => new THREE.Vector3(p.x, p.y, p.z)
+);
+const TRACK_OFFSET = 410
+const offsetz = 20
 interface ModelProps {
   [key: string]: any
+}
+
+
+
+function Walls() {
+  return (
+    <>
+      {points.map((p1, i) => {
+        if (i === points.length - 1) return null;
+
+        const p2 = points[i + 1];
+
+        const dir = new THREE.Vector3().subVectors(p2, p1);
+        const length = dir.length();
+
+        const mid = p1.clone().add(p2).multiplyScalar(0.5);
+
+        const angle = Math.atan2(dir.z, dir.x);
+
+        const normal = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+
+        const left = mid.clone().add(normal.clone().multiplyScalar(30));
+        const right = mid.clone().add(normal.clone().multiplyScalar(-30));
+
+        return (
+          <group key={i}>
+            <RigidBody type="fixed">
+              <CuboidCollider
+                args={[length / 2, 5, 0.5]}
+                position={[left.x + TRACK_OFFSET, left.y + 10, left.z + offsetz]}
+                rotation={[0, -angle, 0]}
+              />
+              <mesh position={[left.x + TRACK_OFFSET, left.y + 10, left.z + offsetz]} rotation={[0, -angle, 0]}>
+                <boxGeometry args={[length, 5, 1]} />
+                <meshBasicMaterial color="none" wireframe />
+              </mesh>
+            </RigidBody>
+
+            <RigidBody type="fixed">
+              <CuboidCollider
+                args={[length / 2, 5, 0.5]}
+                position={[right.x + TRACK_OFFSET, right.y + 10, right.z + offsetz]}
+                rotation={[0, -angle, 0]}
+              />
+              <mesh position={[right.x + TRACK_OFFSET, right.y + 10, right.z + offsetz]} rotation={[0, -angle, 0]}>
+                <boxGeometry args={[length, 5, 1]} />
+                <meshBasicMaterial color="none" wireframe />
+              </mesh>
+            </RigidBody>
+          </group>
+        );
+      })}
+    </>
+  );
 }
 function Sky({ geometry, material }: any) {
   const ref = useRef<THREE.Mesh>(null!)
@@ -38,25 +98,29 @@ function Sky({ geometry, material }: any) {
 
 export function Model(props: ModelProps) {
   const { nodes, materials } = useGLTF('/models/RoadTest.glb') as any
-  return (
-    <group {...props} dispose={null}>
+  return (<>
+    <RigidBody type="fixed" colliders="trimesh">
+      <group {...props} dispose={null}>
 
-      {/* <Sky
+        {/* <Sky
         geometry={nodes.EnvironmentSphere.geometry}
         material={materials['Material.013']}
       /> */}
 
 
 
-      <mesh geometry={nodes.TrackCliffs_Baked_Combined_Compressed.geometry} material={materials.TrackCliffs_Baked_Combined_Compressed} position={[617.033, -5.551, 182.431]} />
-      <mesh geometry={nodes.LargeCliffs_Break_WithLighting_Combined_Compressed.geometry} material={materials.LargeCliffs_Break_WithLighting_Combined_Compressed} />
-      <mesh geometry={nodes.LandscapeScatter_1_Combined_Compressed.geometry} material={materials.LandscapeScatter_1_Combined_Compressed} />
-      <mesh geometry={nodes.Cactus_Scattering_Combined_Compressed.geometry} material={materials.Cactus_Scattering_Combined_Compressed} />
-      <mesh geometry={nodes.LandscapeScatter_2_Combined_Compressed.geometry} material={materials.LandscapeScatter_2_Combined_Compressed} />
-      <mesh geometry={nodes.LandscapeScatter_3_Combined_Compressed.geometry} material={materials.LandscapeScatter_3_Combined_Compressed} />
-      <mesh geometry={nodes.LandscapeScatter_4_Combined_Compressed.geometry} material={materials.LandscapeScatter_4_Combined_Compressed} />
-      <mesh name="Landscape_Combined_Compressed" geometry={nodes.Landscape_Combined_Compressed.geometry} material={materials.Landscape_Combined_Compressed} morphTargetDictionary={nodes.Landscape_Combined_Compressed.morphTargetDictionary} morphTargetInfluences={nodes.Landscape_Combined_Compressed.morphTargetInfluences} />
-    </group>
+        <mesh geometry={nodes.TrackCliffs_Baked_Combined_Compressed.geometry} material={materials.TrackCliffs_Baked_Combined_Compressed} position={[617.033, -5.551, 182.431]} />
+        <mesh geometry={nodes.LargeCliffs_Break_WithLighting_Combined_Compressed.geometry} material={materials.LargeCliffs_Break_WithLighting_Combined_Compressed} />
+        <mesh geometry={nodes.LandscapeScatter_1_Combined_Compressed.geometry} material={materials.LandscapeScatter_1_Combined_Compressed} />
+        <mesh geometry={nodes.Cactus_Scattering_Combined_Compressed.geometry} material={materials.Cactus_Scattering_Combined_Compressed} />
+        <mesh geometry={nodes.LandscapeScatter_2_Combined_Compressed.geometry} material={materials.LandscapeScatter_2_Combined_Compressed} />
+        <mesh geometry={nodes.LandscapeScatter_3_Combined_Compressed.geometry} material={materials.LandscapeScatter_3_Combined_Compressed} />
+        <mesh geometry={nodes.LandscapeScatter_4_Combined_Compressed.geometry} material={materials.LandscapeScatter_4_Combined_Compressed} />
+        <mesh name="Landscape_Combined_Compressed" geometry={nodes.Landscape_Combined_Compressed.geometry} material={materials.Landscape_Combined_Compressed} morphTargetDictionary={nodes.Landscape_Combined_Compressed.morphTargetDictionary} morphTargetInfluences={nodes.Landscape_Combined_Compressed.morphTargetInfluences} />
+      </group>
+    </RigidBody>
+    <Walls />
+  </>
   )
 }
 

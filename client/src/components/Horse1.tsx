@@ -4,7 +4,7 @@ Converted to TSX
 */
 
 import React, { useRef, useMemo, useEffect, forwardRef, useImperativeHandle } from "react";
-import { Group } from "three";
+import { Group, MeshStandardMaterial } from "three";
 import { useGraph } from "@react-three/fiber";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import { SkeletonUtils } from "three-stdlib";
@@ -15,11 +15,14 @@ type GLTFResult = GLTF & {
   materials: any;
 };
 
+type HorseProps = {
+  color?: string;
+  emmisiveIntensity?: number;
+};
 
-
-export const Horse1 = forwardRef((props: any, ref) => {
+export const Horse1 = forwardRef((props: HorseProps, ref) => {
   const group = useRef<Group>(null);
-
+  const { color = "#f5f5f5", emmisiveIntensity = 0.15, ...rest } = props;
   const { scene, animations } = useGLTF("/models/horse.glb") as GLTFResult;
 
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
@@ -28,7 +31,22 @@ export const Horse1 = forwardRef((props: any, ref) => {
 
   const { actions } = useAnimations(animations, group);
 
-  console.log("actions", actions);
+  console.log("actions", actions, materials.Horse);
+  // 🎨 Clone materials per instance
+  const horseMaterial = useMemo(() => {
+    const mat = materials.Horse.clone();
+
+    mat.map = materials.Horse.map; // keep texture
+    mat.color.set(color) // ✅ no multiplyScalar
+
+    // mat.roughness = 0.8;
+    // mat.metalness = 0.1;
+    mat.emissive.set(color);
+    mat.emissiveIntensity = emmisiveIntensity;
+    mat.skinning = true; // ✅ IMPORTANT (add this)
+
+    return mat;
+  }, [materials, color, emmisiveIntensity]);
 
   useImperativeHandle(ref, () => ({
     actions,
@@ -60,13 +78,13 @@ export const Horse1 = forwardRef((props: any, ref) => {
           <skinnedMesh
             name="eyel"
             geometry={nodes.eyel.geometry}
-            material={materials.Horse}
+            material={horseMaterial}
             skeleton={nodes.eyel.skeleton}
           />
           <skinnedMesh
             name="eyer"
             geometry={nodes.eyer.geometry}
-            material={materials.Horse}
+            material={horseMaterial}
             skeleton={nodes.eyer.skeleton}
           />
           <skinnedMesh
@@ -74,7 +92,9 @@ export const Horse1 = forwardRef((props: any, ref) => {
             geometry={nodes.horse_hair.geometry}
             material={materials.Horse_Hair}
             skeleton={nodes.horse_hair.skeleton}
-          />
+          >
+            {/* <meshStandardMaterial color={color} /> */}
+          </skinnedMesh>
           <skinnedMesh
             name="belt_saddle"
             geometry={nodes.belt_saddle.geometry}
@@ -88,11 +108,14 @@ export const Horse1 = forwardRef((props: any, ref) => {
             <skinnedMesh
               name="Mesh003"
               geometry={nodes.Mesh003.geometry}
-              material={materials.Horse}
+              material={horseMaterial}
               skeleton={nodes.Mesh003.skeleton}
               morphTargetDictionary={nodes.Mesh003.morphTargetDictionary}
               morphTargetInfluences={nodes.Mesh003.morphTargetInfluences}
-            />
+
+            >
+
+            </skinnedMesh>
             <skinnedMesh
               name="Mesh003_1"
               geometry={nodes.Mesh003_1.geometry}
@@ -100,11 +123,15 @@ export const Horse1 = forwardRef((props: any, ref) => {
               skeleton={nodes.Mesh003_1.skeleton}
               morphTargetDictionary={nodes.Mesh003_1.morphTargetDictionary}
               morphTargetInfluences={nodes.Mesh003_1.morphTargetInfluences}
-            />
+            >
+              {/* <meshStandardMaterial color={color} /> */}
+            </skinnedMesh>
           </group>
         </group>
       </group>
     </group>
   );
 })
+
+useGLTF.preload("/models/horse.glb");
 

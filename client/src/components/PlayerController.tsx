@@ -7,9 +7,10 @@ import { useGameStore } from "@/hooks/use-game-store";
 import { Car } from "./Car";
 import { Horse } from "./Horse";
 import { Horse1 } from "./Horse1";
-const MAX_SPEED = 40;
-const ACCELERATION = 80;
-const TURN_SPEED = 3.5;
+import { Model } from "./CowboyXHorse_GLB_v01"
+const MAX_SPEED = 30;
+const ACCELERATION = 50;
+const TURN_SPEED = 8;
 const BRAKE_FORCE = 5;
 const JUMP_FORCE = 10; // Simple jump if stuck
 const HEIGHT = 5;
@@ -128,6 +129,9 @@ export function PlayerController() {
 
     camera.position.copy(cameraPosition.current);
     camera.lookAt(cameraTarget.current);
+
+
+    console.log("speed", x, y, z, direction, impulse, torque);
   });
 
   const playAnimation = (name: string) => {
@@ -148,21 +152,28 @@ export function PlayerController() {
     <RigidBody
       ref={body}
       position={[-340, 5.5787, 410]}
-      rotation={[0, 1.396, 0]}
+      // position={[500, 6.5787, 0]}
+      rotation={[0, 1.2, 0]}
       colliders={false}
       mass={1}
-      friction={0.5}
-      restitution={0.2}
-      linearDamping={0.5}
-      angularDamping={0.5}
+      friction={1}
+      restitution={0.8}
+      linearDamping={1}
+      angularDamping={1}
       canSleep={false}
       enabledRotations={[true, true, true]} // Allow some tilt? Maybe lock X/Z for simpler arcade feel
     >
-      <CuboidCollider args={[0.5, 0.5, 1.2]} position={[0, 0.5, 0]} />
+      {/* <CuboidCollider args={[0.5, 0.5, 2.2]} position={[0, 0.5, 0]} restitution={0.2} /> */}
+      <CuboidCollider args={[1.5, 0.2, 0.2]} position={[0, 0.5, 2]} />
+      <CuboidCollider args={[1.5, 0.2, 0.2]} position={[0, 0.5, -2]} />
+      <CuboidCollider args={[0.2, 0.2, 2]} position={[0.5, 0.5, 0]} />
+      <CuboidCollider args={[0.2, 0.2, 2]} position={[-0.5, 0.5, 0]} />
+      {/* <CuboidCollider args={[0.5, 1, 2]} position={[0, 1.7, 0]} /> */}
       {/* Bike Model Placeholder - could be a loaded GLB */}
       {/* <Car /> */}
       {/* <Horse /> */}
-      <Horse1 ref={horseRef} />
+      {/* <Horse1 ref={horseRef} color="#A0522D" /> */}
+      <Model ref={horseRef} />
       {/* <group>
       
         <mesh position={[0, 0.5, 0]} castShadow>

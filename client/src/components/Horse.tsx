@@ -1,4 +1,4 @@
-import { useFBX, useAnimations } from "@react-three/drei"
+import { useFBX, useAnimations, useGLTF } from "@react-three/drei"
 import { useRef, useEffect } from "react"
 
 export function Horse(props: any) {
@@ -6,7 +6,7 @@ export function Horse(props: any) {
     const group = useRef<any>()
 
     const horse = useFBX("/models/horse1.fbx")
-
+    const cowboy = useGLTF("/models/CowboyXHorse_GLB_v01.glb")
     const { animations } = horse
 
     const { actions } = useAnimations(animations, group)
@@ -23,9 +23,11 @@ export function Horse(props: any) {
     return (
         <primitive
             ref={group}
-            object={horse}
+            object={cowboy}
             {...props}
-            scale={0.02}
+            scale={0.1}
         />
     )
 }
+
+useGLTF.preload("/models/CowboyXHorse_GLB_v01.glb");
