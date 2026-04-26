@@ -49,7 +49,7 @@ function Walls() {
                 position={[left.x + TRACK_OFFSET, left.y + 10, left.z + offsetz]}
                 rotation={[0, -angle, 0]}
               />
-              <mesh position={[left.x + TRACK_OFFSET, left.y + 10, left.z + offsetz]} rotation={[0, -angle, 0]}>
+              <mesh visible={false} position={[left.x + TRACK_OFFSET, left.y + 10, left.z + offsetz]} rotation={[0, -angle, 0]}>
                 <boxGeometry args={[length, 5, 1]} />
                 <meshBasicMaterial color="none" wireframe />
               </mesh>
@@ -61,7 +61,7 @@ function Walls() {
                 position={[right.x + TRACK_OFFSET, right.y + 10, right.z + offsetz]}
                 rotation={[0, -angle, 0]}
               />
-              <mesh position={[right.x + TRACK_OFFSET, right.y + 10, right.z + offsetz]} rotation={[0, -angle, 0]}>
+              <mesh visible={false} position={[right.x + TRACK_OFFSET, right.y + 10, right.z + offsetz]} rotation={[0, -angle, 0]}>
                 <boxGeometry args={[length, 5, 1]} />
                 <meshBasicMaterial color="none" wireframe />
               </mesh>
@@ -102,10 +102,10 @@ export function Model(props: ModelProps) {
     <RigidBody type="fixed" colliders="trimesh">
       <group {...props} dispose={null}>
 
-        {/* <Sky
-        geometry={nodes.EnvironmentSphere.geometry}
-        material={materials['Material.013']}
-      /> */}
+        <Sky
+          geometry={nodes.EnvironmentSphere.geometry}
+          material={materials['Material.013']}
+        />
 
 
 

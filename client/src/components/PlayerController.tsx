@@ -1,25 +1,23 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { RigidBody, type RapierRigidBody, CuboidCollider } from "@react-three/rapier";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { Vector3, Quaternion, Euler } from "three";
 import { useKeyboardControls } from "@react-three/drei";
 import { useGameStore } from "@/hooks/use-game-store";
-import { Car } from "./Car";
-import { Horse } from "./Horse";
-import { Horse1 } from "./Horse1";
-import { Model } from "./CowboyXHorse_GLB_v01"
+import { Model } from "./CowboyXHorse_GLB_v01";
+import { BotHorses } from "./BotHorses";
+
+const PLAYER_START_POSITION: [number, number, number] = [-340, 5.5787, 410];
 const MAX_SPEED = 30;
 const ACCELERATION = 50;
 const TURN_SPEED = 8;
 const BRAKE_FORCE = 5;
-const JUMP_FORCE = 10; // Simple jump if stuck
-const HEIGHT = 5;
 
 export function PlayerController() {
   const horseRef = useRef<any>(null);
   const currentAction = useRef<any>(null);
   const body = useRef<RapierRigidBody>(null);
-  const [subscribeKeys, getKeys] = useKeyboardControls();
+  const [, getKeys] = useKeyboardControls();
   const { setSpeed, addScore, isPlaying } = useGameStore();
   const camera = useThree((state) => state.camera);
 
@@ -121,7 +119,7 @@ export function PlayerController() {
     cameraTarget.current.lerp(desiredTarget, 0.1);
 
 
-    const camOffset = new Vector3(0, 8, -16).applyEuler(eulerRot);
+    const camOffset = new Vector3(0, 6, -12).applyEuler(eulerRot);
     const desiredCamPos = posVec.clone().add(camOffset);
 
     // Smooth camera movement
@@ -149,55 +147,30 @@ export function PlayerController() {
   };
 
   return (
-    <RigidBody
-      ref={body}
-      position={[-340, 5.5787, 410]}
-      // position={[500, 6.5787, 0]}
-      rotation={[0, 1.2, 0]}
-      colliders={false}
-      mass={1}
-      friction={1}
-      restitution={0.8}
-      linearDamping={1}
-      angularDamping={1}
-      canSleep={false}
-      enabledRotations={[true, true, true]} // Allow some tilt? Maybe lock X/Z for simpler arcade feel
-    >
-      {/* <CuboidCollider args={[0.5, 0.5, 2.2]} position={[0, 0.5, 0]} restitution={0.2} /> */}
-      <CuboidCollider args={[1.5, 0.2, 0.2]} position={[0, 0.5, 2]} />
-      <CuboidCollider args={[1.5, 0.2, 0.2]} position={[0, 0.5, -2]} />
-      <CuboidCollider args={[0.2, 0.2, 2]} position={[0.5, 0.5, 0]} />
-      <CuboidCollider args={[0.2, 0.2, 2]} position={[-0.5, 0.5, 0]} />
-      {/* <CuboidCollider args={[0.5, 1, 2]} position={[0, 1.7, 0]} /> */}
-      {/* Bike Model Placeholder - could be a loaded GLB */}
-      {/* <Car /> */}
-      {/* <Horse /> */}
-      {/* <Horse1 ref={horseRef} color="#A0522D" /> */}
-      <Model ref={horseRef} />
-      {/* <group>
-      
-        <mesh position={[0, 0.5, 0]} castShadow>
-          <boxGeometry args={[0.8, 0.8, 2.5]} />
-          <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={0.5} roughness={0.2} metalness={0.8} />
-        </mesh>
-
-       
-        <mesh position={[0, 0.4, 1]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.4, 0.4, 0.4, 16]} />
-          <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={0.2} />
-        </mesh>
-        <mesh position={[0, 0.4, -1]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.4, 0.4, 0.4, 16]} />
-          <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={0.2} />
-        </mesh>
-
-     
-        <mesh position={[0, 0.8, 1.2]}>
-          <boxGeometry args={[0.4, 0.2, 0.2]} />
-          <meshStandardMaterial color="#ffff00" emissive="#ffff00" emissiveIntensity={2} />
-        </mesh>
-        <pointLight position={[0, 1, 1.5]} intensity={2} color="#ffff00" distance={10} />
-      </group> */}
-    </RigidBody>
+    <>
+      <RigidBody
+        ref={body}
+        position={PLAYER_START_POSITION}
+        // position={[500, 6.5787, 0]}
+        rotation={[0, 1.2, 0]}
+        colliders={false}
+        mass={1}
+        friction={1}
+        restitution={0.8}
+        linearDamping={1}
+        angularDamping={1}
+        canSleep={false}
+        enabledRotations={[true, true, true]} // Allow some tilt? Maybe lock X/Z for simpler arcade feel
+      >
+        {/* <CuboidCollider args={[0.5, 0.5, 2.2]} position={[0, 0.5, 0]} restitution={0.2} /> */}
+        <CuboidCollider args={[1.5, 0.2, 0.2]} position={[0, 0.5, 2]} />
+        <CuboidCollider args={[1.5, 0.2, 0.2]} position={[0, 0.5, -2]} />
+        <CuboidCollider args={[0.2, 0.2, 2]} position={[0.5, 0.5, 0]} />
+        <CuboidCollider args={[0.2, 0.2, 2]} position={[-0.5, 0.5, 0]} />
+        {/* <CuboidCollider args={[0.5, 1, 2]} position={[0, 1.7, 0]} /> */}
+        <Model ref={horseRef} />
+      </RigidBody>
+      <BotHorses playerBodyRef={body} playerStartPosition={PLAYER_START_POSITION} />
+    </>
   );
 }
