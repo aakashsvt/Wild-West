@@ -21,9 +21,10 @@ export function PlayerController() {
   const { setSpeed, addScore, isPlaying } = useGameStore();
   const camera = useThree((state) => state.camera);
 
-  // Smoothing camera
+  // Smooth the follow anchor and facing while keeping the offset distance fixed.
   const cameraTarget = useRef(new Vector3());
-  const cameraPosition = useRef(new Vector3());
+  const cameraAnchor = useRef(new Vector3());
+  const cameraRotation = useRef(new Quaternion());
 
   // Store distance traveled for scoring
   const lastPosition = useRef(new Vector3());
@@ -113,19 +114,29 @@ export function PlayerController() {
       lastPosition.current.copy(posVec);
     }
 
+    if (cameraAnchor.current.lengthSq() === 0) {
+      cameraAnchor.current.copy(posVec);
+      cameraRotation.current.set(rotation.x, rotation.y, rotation.z, rotation.w);
+    }
+
+    cameraAnchor.current.lerp(posVec, 0.12);
+    cameraRotation.current.slerp(
+      new Quaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+      0.12,
+    );
+
+    const smoothEulerRot = new Euler().setFromQuaternion(cameraRotation.current);
+
     // Camera target is slightly above the player
     const targetOffset = new Vector3(0, 5, 0);
-    const desiredTarget = posVec.clone().add(targetOffset);
+    const desiredTarget = cameraAnchor.current.clone().add(targetOffset);
     cameraTarget.current.lerp(desiredTarget, 0.1);
 
 
-    const camOffset = new Vector3(0, 6, -12).applyEuler(eulerRot);
-    const desiredCamPos = posVec.clone().add(camOffset);
+    const camOffset = new Vector3(0, 6, -12).applyEuler(smoothEulerRot);
+    const desiredCamPos = cameraAnchor.current.clone().add(camOffset);
 
-    // Smooth camera movement
-    cameraPosition.current.lerp(desiredCamPos, 0.05);
-
-    camera.position.copy(cameraPosition.current);
+    camera.position.copy(desiredCamPos);
     camera.lookAt(cameraTarget.current);
 
 
