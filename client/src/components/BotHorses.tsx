@@ -6,7 +6,7 @@ import { useGameStore } from "@/hooks/use-game-store";
 import { Model } from "./CowboyXHorse_GLB_v01";
 import trackPoints from "../../public/models/spline.json";
 
-const BOT_COUNT = 20;
+const BOT_COUNT = 4;
 const BOT_MIN_SPEED = 0;
 const BOT_MAX_SPEED = 13;
 const BOT_SPEED_SMOOTHING = 3;
@@ -16,7 +16,7 @@ const TRACK_OFFSET_X = 410;
 const TRACK_OFFSET_Z = 20;
 const TRACK_WALL_HALF_WIDTH = 30;
 const TRACK_SAFE_HALF_WIDTH = TRACK_WALL_HALF_WIDTH - 18;
-const BOT_TRACK_HEIGHT_OFFSET = 2.2;
+const BOT_TRACK_HEIGHT_OFFSET = 1.5;
 
 const MIN_PLAYER_CLEARANCE = 9;
 const MIN_BOT_CLEARANCE = 8;

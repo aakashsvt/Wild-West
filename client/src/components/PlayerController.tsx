@@ -1,17 +1,24 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { RigidBody, type RapierRigidBody, CuboidCollider } from "@react-three/rapier";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Vector3, Quaternion, Euler } from "three";
 import { useKeyboardControls } from "@react-three/drei";
 import { useGameStore } from "@/hooks/use-game-store";
 import { Model } from "./CowboyXHorse_GLB_v01";
 import { BotHorses } from "./BotHorses";
 
-const PLAYER_START_POSITION: [number, number, number] = [-340, 5.5787, 410];
+// const PLAYER_START_POSITION: [number, number, number] = [-340, 5.5787, 410];
+
+const PLAYER_START_POSITION: [number, number, number] = [422.5, 5.5, -25.1];
+
+
 const MAX_SPEED = 30;
 const ACCELERATION = 50;
 const TURN_SPEED = 8;
 const BRAKE_FORCE = 5;
+const PLAYER_START_ROTATION_Y = 2.5;
+const CAMERA_TARGET_OFFSET = new Vector3(0, 10, 0);
+const CAMERA_FOLLOW_OFFSET = new Vector3(0, 12, -14);
 
 export function PlayerController() {
   const horseRef = useRef<any>(null);
@@ -28,6 +35,24 @@ export function PlayerController() {
 
   // Store distance traveled for scoring
   const lastPosition = useRef(new Vector3());
+
+  useEffect(() => {
+    const spawnPosition = new Vector3(...PLAYER_START_POSITION);
+    const spawnEuler = new Euler(0, PLAYER_START_ROTATION_Y, 0);
+    const spawnRotation = new Quaternion().setFromEuler(spawnEuler);
+    const initialTarget = spawnPosition.clone().add(CAMERA_TARGET_OFFSET);
+    const initialCameraPosition = spawnPosition
+      .clone()
+      .add(CAMERA_FOLLOW_OFFSET.clone().applyEuler(spawnEuler));
+
+    cameraAnchor.current.copy(spawnPosition);
+    cameraRotation.current.copy(spawnRotation);
+    cameraTarget.current.copy(initialTarget);
+    lastPosition.current.copy(spawnPosition);
+
+    camera.position.copy(initialCameraPosition);
+    camera.lookAt(initialTarget);
+  }, [camera]);
 
   useFrame((state, delta) => {
     if (!body.current || !isPlaying) return;
@@ -128,12 +153,11 @@ export function PlayerController() {
     const smoothEulerRot = new Euler().setFromQuaternion(cameraRotation.current);
 
     // Camera target is slightly above the player
-    const targetOffset = new Vector3(0, 5, 0);
-    const desiredTarget = cameraAnchor.current.clone().add(targetOffset);
+    const desiredTarget = cameraAnchor.current.clone().add(CAMERA_TARGET_OFFSET);
     cameraTarget.current.lerp(desiredTarget, 0.1);
 
 
-    const camOffset = new Vector3(0, 6, -12).applyEuler(smoothEulerRot);
+    const camOffset = CAMERA_FOLLOW_OFFSET.clone().applyEuler(smoothEulerRot);
     const desiredCamPos = cameraAnchor.current.clone().add(camOffset);
 
     camera.position.copy(desiredCamPos);
@@ -163,7 +187,7 @@ export function PlayerController() {
         ref={body}
         position={PLAYER_START_POSITION}
         // position={[500, 6.5787, 0]}
-        rotation={[0, 1.2, 0]}
+        rotation={[0, PLAYER_START_ROTATION_Y, 0]}
         colliders={false}
         mass={1}
         friction={1}

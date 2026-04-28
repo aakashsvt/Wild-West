@@ -15,14 +15,12 @@ export const Model = forwardRef((props, ref) => {
   const { nodes, materials } = useGraph(clone);
   const { actions } = useAnimations(animations, group);
 
-  console.log("actions", actions, materials.Horse);
-
   useImperativeHandle(ref, () => ({
     actions,
   }));
 
   return (
-    <group ref={group} {...props} dispose={null} scale={2}>
+    <group ref={group} {...props} dispose={null} scale={3}>
       <group name="Scene">
         <group name="saddle_rig" position={[-0.001, 0, 0.003]}>
           <primitive object={nodes.c_pos_1} />
