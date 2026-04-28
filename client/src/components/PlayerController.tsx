@@ -12,7 +12,7 @@ import { BotHorses } from "./BotHorses";
 const PLAYER_START_POSITION: [number, number, number] = [422.5, 5.5, -25.1];
 
 
-const MAX_SPEED = 30;
+const MAX_SPEED = 50;
 const ACCELERATION = 50;
 const TURN_SPEED = 8;
 const BRAKE_FORCE = 5;
@@ -20,7 +20,10 @@ const PLAYER_START_ROTATION_Y = 2.5;
 const CAMERA_TARGET_OFFSET = new Vector3(0, 10, 0);
 const CAMERA_FOLLOW_OFFSET = new Vector3(0, 12, -14);
 
-export function PlayerController() {
+type Props = {
+  playerRef: React.MutableRefObject<RapierRigidBody | null>
+}
+export function PlayerController({ playerRef }: Props) {
   const horseRef = useRef<any>(null);
   const currentAction = useRef<any>(null);
   const body = useRef<RapierRigidBody>(null);
@@ -35,7 +38,9 @@ export function PlayerController() {
 
   // Store distance traveled for scoring
   const lastPosition = useRef(new Vector3());
-
+  useEffect(() => {
+    playerRef.current = body.current
+  }, [])
   useEffect(() => {
     const spawnPosition = new Vector3(...PLAYER_START_POSITION);
     const spawnEuler = new Euler(0, PLAYER_START_ROTATION_Y, 0);
@@ -192,7 +197,7 @@ export function PlayerController() {
         mass={1}
         friction={1}
         restitution={0.8}
-        linearDamping={1}
+        linearDamping={0.7}
         angularDamping={1}
         canSleep={false}
         enabledRotations={[true, true, true]} // Allow some tilt? Maybe lock X/Z for simpler arcade feel

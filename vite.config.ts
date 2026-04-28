@@ -21,4 +21,7 @@ export default defineConfig({
       deny: ["**/.*"],
     },
   },
+  optimizeDeps: {
+    exclude: ["@react-three/rapier"],
+  },
 });
