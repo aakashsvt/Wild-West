@@ -35,31 +35,35 @@ const MotionBlurShader = {
   `,
 
   fragmentShader: `
-    uniform sampler2D tDiffuse;
-    uniform vec2 direction;
-    uniform float strength;
-    varying vec2 vUv;
+uniform sampler2D tDiffuse;
+uniform vec2 direction;
+uniform float strength;
+varying vec2 vUv;
 
-    void main() {
-      vec2 center = vec2(0.5, 0.5);
-      float dist = distance(vUv, center);
+void main() {
+  vec2 uv = vUv;
 
-      // keep center sharp (horse area)
-      float mask = smoothstep(0.25, 0.6, dist);
+  float dist = distance(uv, vec2(0.5));
 
-      vec4 color = vec4(0.0);
-      float total = 0.0;
+  // tighter edge (less area affected)
+  float edge = smoothstep(0.3, 0.85, dist);
 
-      for (float i = -8.0; i <= 8.0; i++) {
-        float percent = i / 8.0;
-        vec2 offset = direction * percent * strength * mask;
-        color += texture2D(tDiffuse, vUv + offset);
-        total += 1.0;
-      }
+  vec4 color = vec4(0.0);
+  float total = 0.0;
 
-      gl_FragColor = color / total;
-    }
-  `
+  for (float i = 0.0; i < 20.0; i++) {
+    float t = i / 20.0;
+
+    // 🔥 REDUCED stretch (0.6 instead of 1.0)
+    vec2 offset = (uv - vec2(0.5)) * t * strength * edge * 0.6;
+
+    color += texture2D(tDiffuse, uv - offset);
+    total += 1.0;
+  }
+
+  gl_FragColor = color / total;
+}
+`
 }
 
 type Props = {
@@ -106,21 +110,27 @@ export function MotionBlurEffect({ speedRef, playerRef }: Props) {
 
     const speed = speedRef.current || 0
 
-    // 🐎 get horse position
-    const pos = body.translation()
-    tempVec.current.set(pos.x, pos.y, pos.z)
+    // 🚀 get REAL velocity (not projected position)
+    const vel = body.linvel()
 
-    // convert to screen space (-1 to 1)
-    tempVec.current.project(camera)
+    // convert world velocity → camera space
+    tempVec.current.set(vel.x, vel.y, vel.z)
+    tempVec.current.applyQuaternion(camera.quaternion.clone().invert())
 
-    // direction toward horse
-    const dirX = tempVec.current.x * 0.03
-    const dirY = tempVec.current.y * 0.03
+    // normalize direction (2D screen direction)
+    const dirX = THREE.MathUtils.clamp(tempVec.current.x * 0.02, -1, 1)
+    const dirY = THREE.MathUtils.clamp(-tempVec.current.y * 0.02, -1, 1)
 
     blur.uniforms.direction.value.set(dirX, dirY)
 
-    // speed-based intensity
-    blur.uniforms.strength.value = THREE.MathUtils.clamp(speed * 0.4, 0.2, 1.0)
+    // 🎯 Asphalt-style intensity curve
+    const intensity = THREE.MathUtils.clamp(
+      Math.pow(speed, 1.3) * 0.15,
+      0.0,
+      1.2
+    )
+
+    blur.uniforms.strength.value = intensity
 
     gl.clear()
     comp.render()
