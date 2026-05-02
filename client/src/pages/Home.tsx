@@ -9,8 +9,7 @@ export default function Home() {
   const [_, setLocation] = useLocation();
 
   const handleStart = () => {
-    startGame();
-    setLocation("/game");
+    setLocation("/lobby");
   };
 
   return (

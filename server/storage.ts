@@ -9,10 +9,12 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getScores(): Promise<Score[]> {
+    if (!db) return [];
     return await db.select().from(scores).orderBy(desc(scores.score)).limit(10);
   }
 
   async createScore(insertScore: InsertScore): Promise<Score> {
+    if (!db) throw new Error("Database not configured");
     const [score] = await db.insert(scores).values(insertScore).returning();
     return score;
   }

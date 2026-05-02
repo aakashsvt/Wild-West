@@ -8,6 +8,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      "@shared": path.resolve(import.meta.dirname, "shared"),
     },
   },
   root: path.resolve(import.meta.dirname, "client"),
@@ -16,6 +17,9 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    proxy: {
+      '/socket.io': { target: 'http://127.0.0.1:5000', ws: true },
+    },
     fs: {
       strict: true,
       deny: ["**/.*"],
