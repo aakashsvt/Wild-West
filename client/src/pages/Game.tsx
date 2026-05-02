@@ -12,6 +12,8 @@ import { Model } from "@/components/Track1";
 import { GameHUD } from "@/components/GameHUD";
 import { GameOverModal } from "@/components/GameOverModal";
 import { useGameStore } from "@/hooks/use-game-store";
+import { useLobbyStore } from "@/hooks/use-lobby-store";
+import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import { Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
@@ -144,11 +146,31 @@ export default function Game() {
   const playerRef = useRef<RapierRigidBody | null>(null)
   const speedRef = useRef(0)
 
-  const { speed } = useGameStore()
+  const { speed, score, timeElapsed, isPlaying, isGameOver } = useGameStore()
+  const { setStandings, setRaceResults } = useLobbyStore()
 
   useEffect(() => {
     speedRef.current = speed
   }, [speed])
+
+  // Emit periodic score update while racing
+  useEffect(() => {
+    if (!isPlaying) return;
+    const id = setInterval(() => {
+      getSocket().emit('race:update', { score, timeTaken: timeElapsed });
+    }, 5000);
+    return () => clearInterval(id);
+  }, [isPlaying, score, timeElapsed]);
+
+  // Emit finish signal when game ends
+  useEffect(() => {
+    if (!isGameOver) return;
+    getSocket().emit('race:finish', { score, timeTaken: timeElapsed });
+  }, [isGameOver, score, timeElapsed]);
+
+  // Subscribe to server-authoritative standings
+  useSocketEvent('race:standings', setStandings);
+  useSocketEvent('race:results', setRaceResults);
   const keyboardMap = useMemo(() => [
     { name: "forward", keys: ["ArrowUp", "KeyW"] },
     { name: "backward", keys: ["ArrowDown", "KeyS"] },

@@ -15,15 +15,34 @@ export interface LobbyRoom {
   maxPlayers: number;
 }
 
+export interface StandingEntry {
+  username: string;
+  colorIndex: number;
+  score: number;
+  position: number;   // 1-based, server-assigned
+  finished: boolean;
+}
+
+export interface RaceResultEntry {
+  position: number;
+  username: string;
+  score: number;
+  timeTaken: number;
+}
+
 export interface ClientToServerEvents {
-  'lobby:join':  (payload: { username: string }) => void;
-  'lobby:ready': () => void;
-  'lobby:leave': () => void;
+  'lobby:join':    (payload: { username: string }) => void;
+  'lobby:ready':   () => void;
+  'lobby:leave':   () => void;
+  'race:update':   (payload: { score: number; timeTaken: number }) => void;
+  'race:finish':   (payload: { score: number; timeTaken: number }) => void;
 }
 
 export interface ServerToClientEvents {
   'lobby:state':     (room: LobbyRoom) => void;
   'lobby:countdown': (secondsRemaining: number) => void;
-  'lobby:start':     () => void;
+  'lobby:start':     (payload: { raceId: string }) => void;
   'lobby:error':     (message: string) => void;
+  'race:standings':  (standings: StandingEntry[]) => void;
+  'race:results':    (results: RaceResultEntry[]) => void;
 }

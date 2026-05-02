@@ -30,5 +30,10 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/races/:raceId/results', async (req, res) => {
+    const results = await storage.getRaceResults(req.params.raceId);
+    res.json(results);
+  });
+
   return httpServer;
 }

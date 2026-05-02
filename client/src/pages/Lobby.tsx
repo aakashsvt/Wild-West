@@ -7,6 +7,7 @@ import { useLobbyStore } from "@/hooks/use-lobby-store";
 import { useGameStore } from "@/hooks/use-game-store";
 import type { LobbyRoom } from "@shared/types/multiplayer";
 
+
 const PLAYER_COLORS = ["#ec4899", "#60a5fa", "#4ade80", "#facc15"];
 const PLAYER_COLOR_NAMES = ["Pink", "Blue", "Green", "Gold"];
 
@@ -22,6 +23,7 @@ export default function Lobby() {
     setCountdown,
     setError,
     setSocketId,
+    setRaceId,
     resetLobby,
   } = useLobbyStore();
 
@@ -41,12 +43,13 @@ export default function Lobby() {
     [setCountdown],
   );
   const onError = useCallback((msg: string) => setError(msg), [setError]);
-  const onStart = useCallback(() => {
+  const onStart = useCallback(({ raceId }: { raceId: string }) => {
     if (hasStarted.current) return;
     hasStarted.current = true;
+    setRaceId(raceId);
     startGame();
     setLocation("/game");
-  }, [startGame, setLocation]);
+  }, [startGame, setLocation, setRaceId]);
 
   useSocketEvent("lobby:state", onLobbyState);
   useSocketEvent("lobby:countdown", onCountdown);
