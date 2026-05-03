@@ -1,7 +1,11 @@
 import { useGameStore } from "@/hooks/use-game-store";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
 import { useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+
+// Western player colours — must match Lobby.tsx
+const PLAYER_COLORS = ["#d4a853", "#c0392b", "#2980b9", "#5a8a4a"];
+const POSITION_LABELS = ["1st", "2nd", "3rd", "4th"];
 
 // Western palette — same tokens as Home, LoadingScreen, GameTransitionOverlay
 const W = {
@@ -106,30 +110,76 @@ export function GameHUD() {
         </motion.div>
       </div>
 
-      {/* Final results overlay */}
+      {/* ── Race results overlay ──────────────────────────────────────────── */}
       <AnimatePresence>
         {raceResults && raceResults.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 flex items-center justify-center pointer-events-none"
           >
-            <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-8 min-w-[320px]">
-              <h3 className="text-2xl font-black font-display text-transparent bg-clip-text bg-gradient-to-r from-white to-primary mb-6 text-center uppercase tracking-widest">
-                Race Over
-              </h3>
+            <div
+              className="rounded px-8 py-7 min-w-[300px]"
+              style={{
+                background: "rgba(19,10,4,0.95)",
+                border: `1px solid rgba(107,56,32,0.7)`,
+                boxShadow: "0 8px 40px rgba(0,0,0,0.8)",
+                backdropFilter: "blur(10px)",
+              }}
+            >
+              {/* Title */}
+              <div className="flex items-center gap-3 mb-5">
+                <div className="flex-1 h-px" style={{ background: "linear-gradient(to right, transparent, #a07030)" }} />
+                <h3
+                  className="font-western tracking-wider text-shadow-western"
+                  style={{ fontSize: "1.5rem", color: "#e8d5b0" }}
+                >
+                  Race Over
+                </h3>
+                <div className="flex-1 h-px" style={{ background: "linear-gradient(to left, transparent, #a07030)" }} />
+              </div>
+
+              {/* Results rows */}
               <div className="flex flex-col gap-3">
-                {raceResults.map((r) => (
-                  <div key={r.username} className="flex items-center gap-4">
-                    <span className="text-2xl font-black font-display w-12 text-right" style={{ color: PLAYER_COLORS[r.position - 1] ?? "#fff" }}>
-                      {POSITION_LABELS[r.position - 1] ?? `${r.position}`}
-                    </span>
-                    <span className="flex-1 font-bold text-white text-lg">{r.username}</span>
-                    <span className="text-white/50 font-mono text-sm">{r.score.toLocaleString()} pts</span>
-                    <span className="text-white/30 font-mono text-xs">{formatTime(r.timeTaken)}</span>
-                  </div>
-                ))}
+                {raceResults.map((r) => {
+                  const posColor = PLAYER_COLORS[r.position - 1] ?? W.cream;
+                  return (
+                    <div
+                      key={r.username}
+                      className="flex items-center gap-3 px-3 py-2 rounded-sm"
+                      style={{
+                        background: `${posColor}10`,
+                        border: `1px solid ${posColor}30`,
+                      }}
+                    >
+                      <span
+                        className="font-western w-10 text-right flex-shrink-0"
+                        style={{ color: posColor, fontSize: "1.1rem" }}
+                      >
+                        {POSITION_LABELS[r.position - 1] ?? `${r.position}`}
+                      </span>
+                      <span
+                        className="flex-1 font-western text-sm tracking-wide truncate"
+                        style={{ color: W.cream }}
+                      >
+                        {r.username}
+                      </span>
+                      <span
+                        className="font-mono text-xs"
+                        style={{ color: W.creamMuted }}
+                      >
+                        {r.score.toLocaleString()}
+                      </span>
+                      <span
+                        className="font-mono text-xs"
+                        style={{ color: W.borderWarm }}
+                      >
+                        {formatTime(r.timeTaken)}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </motion.div>

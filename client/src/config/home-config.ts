@@ -13,7 +13,7 @@ export const HOME_CONFIG = {
 
   // ── Player info ─────────────────────────────────────────────────────────
   player: {
-    name: "CowboyRider",
+    name: "Rider",
     level: 1,
     xp: 0,
     xpMax: 100,
@@ -50,7 +50,7 @@ export const HOME_CONFIG = {
       enabled: true,
     },
     customize: {
-      label: "Outfit",
+      label: "Customize",
       enabled: false,
     },
     signIn: {
