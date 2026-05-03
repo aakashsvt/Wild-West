@@ -2,6 +2,22 @@ import { useGameStore } from "@/hooks/use-game-store";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 
+// Western palette — same tokens as Home, LoadingScreen, GameTransitionOverlay
+const W = {
+  bg:         "#0a0603",
+  panelDark:  "#130a04",
+  panelMid:   "#1e0f06",
+  borderDim:  "#3d1e0a",
+  borderWarm: "#6b3820",
+  borderGold: "#a07030",
+  gold:       "#c8922a",
+  goldBright: "#d4a853",
+  goldPale:   "#e8c87a",
+  cream:      "#e8d5b0",
+  creamMuted: "#b89a72",
+  rust:       "#8b3d1f",
+} as const;
+
 export function GameHUD() {
   const { speed, score, timeElapsed, incrementTime, isPlaying } = useGameStore();
 
@@ -16,40 +32,119 @@ export function GameHUD() {
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
   if (!isPlaying) return null;
 
+  const panelStyle: React.CSSProperties = {
+    background: `${W.panelDark}e8`,
+    border: `1px solid ${W.borderWarm}70`,
+    boxShadow: "0 4px 24px rgba(0,0,0,0.65)",
+    backdropFilter: "blur(6px)",
+  };
+
   return (
-    <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-8">
-      {/* Top Bar */}
-      <div className="flex justify-between items-start">
-        <div className="bg-black/50 backdrop-blur-md p-4 rounded-lg border border-primary/30 clip-diagonal box-shadow-neon shadow-primary/20">
-          <div className="text-xs text-primary uppercase font-bold tracking-widest">Score</div>
-          <div className="text-4xl font-display text-white text-shadow-neon">{score.toLocaleString()}</div>
-        </div>
-        
-        <div className="bg-black/50 backdrop-blur-md p-4 rounded-lg border border-secondary/30 clip-diagonal box-shadow-neon shadow-secondary/20">
-          <div className="text-xs text-secondary uppercase font-bold tracking-widest">Time</div>
-          <div className="text-4xl font-display text-white text-shadow-neon">{formatTime(timeElapsed)}</div>
-        </div>
+    <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-5">
+
+      {/* ── Top bar: Score (left) + Time (right) ─────────────────────────── */}
+      <div className="flex justify-between items-start gap-3">
+
+        {/* Score */}
+        <motion.div
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.35 }}
+          className="rounded px-4 py-3 min-w-[120px]"
+          style={panelStyle}
+        >
+          <div
+            className="text-[10px] font-mono tracking-[0.25em] uppercase mb-1"
+            style={{ color: W.creamMuted }}
+          >
+            ✦ Bounty
+          </div>
+          <div
+            className="font-western leading-none tabular-nums"
+            style={{
+              fontSize: "clamp(1.6rem, 3vw, 2.2rem)",
+              color: W.goldBright,
+              textShadow: `1px 1px 0 #0a0603, 0 0 20px ${W.gold}60`,
+            }}
+          >
+            {score.toLocaleString()}
+          </div>
+        </motion.div>
+
+        {/* Time */}
+        <motion.div
+          initial={{ x: 20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.35 }}
+          className="rounded px-4 py-3 min-w-[120px] text-right"
+          style={panelStyle}
+        >
+          <div
+            className="text-[10px] font-mono tracking-[0.25em] uppercase mb-1"
+            style={{ color: W.creamMuted }}
+          >
+            Trail Time ✦
+          </div>
+          <div
+            className="font-western leading-none tabular-nums"
+            style={{
+              fontSize: "clamp(1.6rem, 3vw, 2.2rem)",
+              color: W.cream,
+              textShadow: `1px 1px 0 #0a0603`,
+            }}
+          >
+            {formatTime(timeElapsed)}
+          </div>
+        </motion.div>
       </div>
 
-      {/* Speedometer */}
-      <div className="flex justify-end items-end">
-        <div className="relative w-64 h-64 flex items-center justify-center">
-          {/* Radial Gradient BG */}
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent rounded-full blur-xl" />
-          
-          <div className="text-right">
-            <div className="text-8xl font-display font-black text-white italic text-shadow-neon leading-none">
+      {/* ── Bottom-right: Speedometer ─────────────────────────────────────── */}
+      <div className="flex justify-end">
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="rounded px-5 py-4 w-44"
+          style={panelStyle}
+        >
+          {/* Speed number */}
+          <div className="flex items-baseline gap-2 justify-end">
+            <span
+              className="font-western tabular-nums leading-none"
+              style={{
+                fontSize: "clamp(2.8rem, 5vw, 3.8rem)",
+                color: speed > 75 ? W.goldBright : W.cream,
+                textShadow:
+                  speed > 75
+                    ? `1px 1px 0 #0a0603, 0 0 30px ${W.gold}80`
+                    : `1px 1px 0 #0a0603`,
+                transition: "color 0.3s, text-shadow 0.3s",
+              }}
+            >
               {Math.abs(speed)}
-            </div>
-            <div className="text-xl text-primary font-bold uppercase tracking-widest">km/h</div>
+            </span>
+            <span
+              className="font-mono text-xs tracking-widest uppercase pb-1"
+              style={{ color: W.creamMuted }}
+            >
+              km/h
+            </span>
           </div>
-        </div>
+
+          <div
+            className="text-[9px] font-mono tracking-[0.3em] uppercase mt-1 text-right"
+            style={{ color: `${W.borderWarm}` }}
+          >
+            ✦ Speed
+          </div>
+        </motion.div>
       </div>
+
     </div>
   );
 }
