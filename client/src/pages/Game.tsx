@@ -2,8 +2,8 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import * as THREE from "three";
 import { KeyboardControls, Environment, OrbitControls, Stars } from "@react-three/drei";
-import { Suspense, useMemo, useRef, useEffect } from "react";
-
+import { Suspense, useMemo, useRef, useEffect, useState, useCallback } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 import type { RapierRigidBody } from "@react-three/rapier"
 import { PlayerController } from "@/components/PlayerController";
@@ -21,6 +21,167 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 
+// ── Western palette — matches Home and LoadingScreen ─────────────────────────
+const W = {
+  bg:         "#0a0603",
+  borderWarm: "#6b3820",
+  borderGold: "#a07030",
+  gold:       "#c8922a",
+  goldBright: "#d4a853",
+  cream:      "#e8d5b0",
+  creamMuted: "#b89a72",
+} as const;
+
+// ── SceneReadyProbe — renders inside Canvas/Physics, fires onReady after first rendered frame ──
+function SceneReadyProbe({ onReady }: { onReady: () => void }) {
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      const t = setTimeout(onReady, 150);
+      return () => clearTimeout(t);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [onReady]);
+  return null;
+}
+
+// ── GameTransitionOverlay — purely visual, zero effect on game logic ──────────
+type OverlayPhase = "loading" | "countdown";
+
+function GameTransitionOverlay({
+  phase,
+  onDone,
+}: {
+  phase: OverlayPhase;
+  onDone: () => void;
+}) {
+  // Animated dots for loading phase
+  const [dots, setDots] = useState(1);
+  useEffect(() => {
+    if (phase !== "loading") return;
+    const id = setInterval(() => setDots((d) => (d % 3) + 1), 400);
+    return () => clearInterval(id);
+  }, [phase]);
+
+  // Countdown: 3 → 2 → 1 → "GO!" then fires onDone
+  const [step, setStep] = useState<number | "GO">(3);
+  useEffect(() => {
+    if (phase !== "countdown") return;
+    const timers = [
+      setTimeout(() => setStep(2), 1000),
+      setTimeout(() => setStep(1), 2000),
+      setTimeout(() => setStep("GO"), 3000),
+      setTimeout(onDone, 3600),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, [phase, onDone]);
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center select-none overflow-hidden"
+      style={{ background: W.bg }}
+      exit={{ opacity: 0, transition: { duration: 0.45 } }}
+    >
+      {/* Warm radial gradient from top */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `radial-gradient(ellipse 130% 80% at 50% 0%,
+            #2d140a 0%, #1a0a04 40%, ${W.bg} 72%)`,
+        }}
+      />
+      {/* Subtle earthy grid */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            `linear-gradient(to right, rgba(139,90,43,0.10) 1px, transparent 1px),
+             linear-gradient(to bottom, rgba(139,90,43,0.10) 1px, transparent 1px)`,
+          backgroundSize: "60px 60px",
+        }}
+      />
+      {/* Corner vignette */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `radial-gradient(ellipse 65% 65% at 50% 50%,
+            transparent 20%, rgba(10,6,3,0.82) 100%)`,
+        }}
+      />
+
+      <div className="relative z-10 flex flex-col items-center gap-6 px-6 w-full max-w-lg">
+        {/* Top ornament */}
+        <div className="flex items-center gap-3 w-full">
+          <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, transparent, ${W.borderGold})` }} />
+          <span className="text-xs tracking-[0.35em] font-mono" style={{ color: W.gold }}>✦</span>
+          <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, transparent, ${W.borderGold})` }} />
+        </div>
+
+        {/* Title */}
+        <h1
+          className="font-western text-center leading-tight tracking-wider text-shadow-western"
+          style={{ fontSize: "clamp(2.2rem, 6vw, 3.8rem)", color: W.cream }}
+        >
+          Wild West Rider
+        </h1>
+
+        {phase === "loading" ? (
+          <>
+            <p
+              className="text-sm tracking-[0.25em] uppercase font-mono text-center"
+              style={{ color: W.creamMuted }}
+            >
+              {"Mounting up" + ".".repeat(dots)}
+            </p>
+            <motion.span
+              animate={{ opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+              className="font-western text-4xl"
+              style={{ color: W.goldBright }}
+            >
+              ✦
+            </motion.span>
+          </>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={String(step)}
+              initial={{ scale: 1.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.4, opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="font-western text-center"
+              style={{
+                fontSize: "clamp(5rem, 18vw, 10rem)",
+                color: step === "GO" ? W.cream : W.goldBright,
+                textShadow:
+                  step === "GO"
+                    ? `2px 2px 0 #0a0603, 0 0 60px rgba(232,213,176,0.5)`
+                    : `2px 2px 0 #0a0603, 0 0 60px rgba(200,146,42,0.6)`,
+                lineHeight: 1,
+              }}
+            >
+              {step}
+            </motion.div>
+          </AnimatePresence>
+        )}
+
+        {/* Bottom ornament */}
+        <div className="flex items-center gap-3 w-full">
+          <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, transparent, ${W.borderWarm})` }} />
+          <span className="text-[10px] tracking-[0.3em] font-mono" style={{ color: W.borderWarm }}>
+            ✦ &nbsp; CANYON RACER &nbsp; ✦
+          </span>
+          <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, transparent, ${W.borderWarm})` }} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ── MotionBlurShader ──────────────────────────────────────────────────────────
 const MotionBlurShader = {
   uniforms: {
     tDiffuse: { value: null },
@@ -72,7 +233,6 @@ type Props = {
   speedRef: React.MutableRefObject<number>
   playerRef: React.MutableRefObject<RapierRigidBody | null>
 }
-
 
 export function MotionBlurEffect({ speedRef, playerRef }: Props) {
   const { gl, scene, camera, size } = useThree()
@@ -141,6 +301,9 @@ export function MotionBlurEffect({ speedRef, playerRef }: Props) {
   return null
 }
 
+// ── Game ──────────────────────────────────────────────────────────────────────
+type GamePhase = "loading" | "countdown" | "done";
+
 export default function Game() {
   const { resetGame } = useGameStore();
   const playerRef = useRef<RapierRigidBody | null>(null)
@@ -152,6 +315,12 @@ export default function Game() {
   useEffect(() => {
     speedRef.current = speed
   }, [speed])
+
+  // Overlay phase — drives visual only, no effect on game logic
+  const [phase, setPhase] = useState<GamePhase>("loading");
+  const handleSceneReady = useCallback(() => setPhase("countdown"), []);
+  const handleOverlayDone = useCallback(() => setPhase("done"), []);
+
 
   // Emit periodic score update while racing
   useEffect(() => {
@@ -180,58 +349,51 @@ export default function Game() {
   ], []);
 
   return (
-    <div className="w-full h-screen bg-black overflow-hidden relative">
+    <div className="w-full h-screen bg-[#0a0603] overflow-hidden relative">
       <GameHUD />
       <GameOverModal />
 
-      <div className="absolute top-4 left-4 z-10">
-        <Link href="/" className="px-4 py-2 bg-black/50 text-white/50 hover:text-white rounded-lg border border-white/10 backdrop-blur transition-colors text-sm uppercase font-bold tracking-wider" onClick={resetGame}>
-          Exit Race
+      <div className="absolute bottom-5 left-5 z-10">
+        <Link
+          href="/"
+          onClick={resetGame}
+          className="font-western text-sm tracking-wider rounded px-4 py-2 transition-colors"
+          style={{
+            background: "rgba(19,10,4,0.85)",
+            border: "1px solid rgba(107,56,32,0.6)",
+            color: "rgba(184,154,114,0.8)",
+            backdropFilter: "blur(6px)",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#e8d5b0")}
+          onMouseLeave={e => (e.currentTarget.style.color = "rgba(184,154,114,0.8)")}
+        >
+          ✦ Exit Race
         </Link>
       </div>
 
       <KeyboardControls map={keyboardMap}>
         <Canvas shadows camera={{ position: [0, 5, 10], fov: 60 }} gl={{
-          toneMapping: THREE.LinearToneMapping,   // ✅ Linear mapping
+          toneMapping: THREE.LinearToneMapping,
           outputColorSpace: THREE.SRGBColorSpace,
           toneMappingExposure: 1
         }}>
           <Suspense fallback={null}>
-            <Environment files="/models/Cannon_Exterior.hdr" background={true} blur={0}
-            />
-            {/* <ambientLight intensity={1} />
-
-
-            <directionalLight
-              position={[10, 70, 10]}
-              intensity={1}
-              castShadow
-              shadow-mapSize={[2048, 2048]}
-            >
-              <orthographicCamera attach="shadow-camera" args={[-50, 50, -50, 50, 0.1, 100]} />
-            </directionalLight> */}
-            {/* 
-            <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} /> */}
-
+            <Environment files="/models/Cannon_Exterior.hdr" background={true} blur={0} />
             <Physics gravity={[0, -9.81, 0]} debug={false}>
               <PlayerController playerRef={playerRef} />
               <Model />
+              <SceneReadyProbe onReady={handleSceneReady} />
             </Physics>
-
             <MotionBlurEffect speedRef={speedRef} playerRef={playerRef} />
           </Suspense>
         </Canvas>
       </KeyboardControls>
 
-      {/* Loading Overlay */}
-      <Suspense fallback={
-        <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center gap-4">
-          <Loader2 className="w-12 h-12 text-primary animate-spin" />
-          <div className="text-white font-display text-xl animate-pulse">Loading Track Data...</div>
-        </div>
-      }>
-        <></>
-      </Suspense>
+      <AnimatePresence>
+        {phase !== "done" && (
+          <GameTransitionOverlay phase={phase} onDone={handleOverlayDone} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
