@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\swapn\\\\OneDrive\\\\Desktop\\\\wild-west-rider\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(dir /B)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\swapn\\\\OneDrive\\\\Desktop\\\\wild-west-rider\" -Recurse -Force)",
+      "Bash(Select-Object -First 50)",
+      "PowerShell(head -30)",
+      "Bash(xargs cat *)",
+      "Bash(node -e \"const pkg = require\\('./package.json'\\); console.log\\('socket.io' in pkg.dependencies || 'socket.io' in \\(pkg.devDependencies||{}\\)\\); console.log\\('ws' in pkg.dependencies || 'ws' in \\(pkg.devDependencies||{}\\)\\);\")",
+      "Bash(findstr -i \"socket\")",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\swapn\\\\OneDrive\\\\Desktop\\\\wild-west-rider\\\\client\\\\src\\\\hooks\" -File)"
+    ]
+  }
+}
