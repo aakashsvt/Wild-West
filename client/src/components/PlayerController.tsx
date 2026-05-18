@@ -1,5 +1,5 @@
 import { useFrame, useThree } from "@react-three/fiber";
-import { RigidBody, type RapierRigidBody, CuboidCollider } from "@react-three/rapier";
+import { RigidBody, type RapierRigidBody, CuboidCollider, CapsuleCollider, RoundCuboidCollider } from "@react-three/rapier";
 import { useEffect, useMemo, useRef } from "react";
 import { Vector3, Quaternion, Euler } from "three";
 import { useKeyboardControls } from "@react-three/drei";
@@ -13,7 +13,7 @@ import * as THREE from "three";
 import { PerspectiveCamera } from "three"
 // const PLAYER_START_POSITION: [number, number, number] = [-340, 5.5787, 410];
 
-const PLAYER_START_POSITION: [number, number, number] = [422.5, 5.5, -25.1];
+const PLAYER_START_POSITION: [number, number, number] = [422.5, 7, -25.1];
 
 
 const MAX_SPEED = 70;
@@ -206,12 +206,12 @@ export function PlayerController({ playerRef }: Props) {
       true
     )
     // =========================
-    // 🎞 ANIMATIONS (same logic)
+    // 🎞 ANIMATIONS 
     // =========================
 
     if (jump) {
       playAnimation("JUMP");
-      playAnimation("KICK_RUN.R.90");
+
     } else if (forward) {
 
       if (left) playAnimation("RUN_LEFT");
@@ -270,7 +270,7 @@ export function PlayerController({ playerRef }: Props) {
     rightVec.crossVectors(forwards, up).normalize()
 
     // dynamic distance (speed-based)
-    const dynamicDistance = CAMERA_DISTANCE + currentSpeed * 0.15
+    const dynamicDistance = CAMERA_DISTANCE
 
     // turn anticipation (subtle sideways shift)
     const turnOffset = rightVec.clone().multiplyScalar(
@@ -391,20 +391,31 @@ export function PlayerController({ playerRef }: Props) {
       // position={[500, 6.5787, 0]}
       rotation={[0, PLAYER_START_ROTATION_Y, 0]}
       colliders={false}
-      mass={1}
-      friction={1}
-      restitution={0.8}
+
+      mass={0.1}
+      friction={0.5}
+      restitution={0}
       linearDamping={1}
-      angularDamping={5}
+      angularDamping={8}
       canSleep={false}
-      enabledRotations={[true, true, true]} // Allow some tilt? Maybe lock X/Z for simpler arcade feel
+      dominanceGroup={10}
+      enabledRotations={[false, false, false]} // Allow some tilt? Maybe lock X/Z for simpler arcade feel
+      ccd
+
     >
       {/* <CuboidCollider args={[0.5, 0.5, 2.2]} position={[0, 0.5, 0]} restitution={0.2} /> */}
-      <CuboidCollider args={[1.5, 0.2, 0.2]} position={[0, 0.5, 2]} />
-      <CuboidCollider args={[1.5, 0.2, 0.2]} position={[0, 0.5, -2]} />
-      <CuboidCollider args={[0.2, 0.2, 2]} position={[0.5, 0.5, 0]} />
-      <CuboidCollider args={[0.2, 0.2, 2]} position={[-0.5, 0.5, 0]} />
+      {/* <CuboidCollider args={[1.5, 0.5, 0.5]} position={[0, 0.5, 2]} />
+      <CuboidCollider args={[1.5, 0.5, 0.5]} position={[0, 0.5, -2]} />
+      <CuboidCollider args={[0.5, 0.5, 2]} position={[0.5, 0.5, 0]} />
+      <CuboidCollider args={[0.5, 0.5, 2]} position={[-0.5, 0.5, 0]} /> */}
       {/* <CuboidCollider args={[0.5, 1, 2]} position={[0, 1.7, 0]} /> */}
+      <RoundCuboidCollider
+        args={[1.4, 0.7, 3, 0.2]}
+        position={[0, 0.9, 0]}
+        restitution={0}
+      />
+      {/* <CapsuleCollider args={[1, 0.5]} position={[0, 0.7, -2]} rotation={[0, 0, Math.PI / 2]} />
+      <CapsuleCollider args={[1, 0.5]} position={[0, 0.7, 3]} rotation={[0, 0, Math.PI / 2]} /> */}
       {/* <Model ref={horseRef} />
        */}
       <Model1 ref={horseRef} />

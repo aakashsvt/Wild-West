@@ -1,15 +1,15 @@
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { CuboidCollider, RigidBody, type RapierRigidBody } from "@react-three/rapier";
+import { CuboidCollider, RigidBody, RoundCuboidCollider, type RapierRigidBody } from "@react-three/rapier";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Euler, MathUtils, Quaternion, Vector3 } from "three";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
 import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import type { PlayerInfo, RacePlayerState, Vec3Tuple } from "@shared/types/multiplayer";
 import { Model } from "./CowboyXHorse_GLB_v01";
-
+import { Model1 } from "./CowboyXHorse_GLB_v08";
 const PLAYER_COLORS = ["#d4a853", "#c0392b", "#2980b9", "#5a8a4a"];
-const PLAYER_START_POSITION: Vec3Tuple = [422.5, 5.5, -25.1];
+const PLAYER_START_POSITION: Vec3Tuple = [422.5, 7, -25.1];
 const PLAYER_START_ROTATION_Y = 2.5;
 const START_LANE_SPACING = 5;
 const STALE_PLAYER_MS = 5000;
@@ -191,36 +191,46 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       position={[startPosition.x, startPosition.y, startPosition.z]}
       rotation={[0, PLAYER_START_ROTATION_Y, 0]}
       colliders={false}
-      friction={1}
+      mass={0.1}
+      friction={0.5}
+      restitution={0}
+      linearDamping={1}
+      angularDamping={8}
       canSleep={false}
+      dominanceGroup={10}
+      enabledRotations={[false, false, false]}
+      ccd
+
+
     >
       {isVisible && (
-      <group>
-        <CuboidCollider args={[1.5, 0.2, 0.2]} position={[0, 0.5, 2]} />
-        <CuboidCollider args={[1.5, 0.2, 0.2]} position={[0, 0.5, -2]} />
-        <CuboidCollider args={[0.2, 0.2, 2]} position={[0.5, 0.5, 0]} />
-        <CuboidCollider args={[0.2, 0.2, 2]} position={[-0.5, 0.5, 0]} />
-        <Model ref={horseRef} />
-        <Html position={[0, 5.2, 0]} center distanceFactor={35} style={{ pointerEvents: "none" }}>
-          <div
-            style={{
-              background: "rgba(19, 10, 4, 0.82)",
-              border: `1px solid ${color}80`,
-              borderRadius: 4,
-              boxShadow: "0 4px 18px rgba(0,0,0,0.5)",
-              color,
-              fontFamily: "serif",
-              fontSize: 12,
-              letterSpacing: "0.08em",
-              padding: "4px 8px",
-              textShadow: "1px 1px 0 #0a0603",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {player.username}
-          </div>
-        </Html>
-      </group>
+        <group>
+          <RoundCuboidCollider
+            args={[1.4, 0.7, 3, 0.2]}
+            position={[0, 0.9, 0]}
+            restitution={0}
+          />
+          <Model1 ref={horseRef} />
+          <Html position={[0, 5.2, 0]} center distanceFactor={35} style={{ pointerEvents: "none" }}>
+            <div
+              style={{
+                background: "rgba(19, 10, 4, 0.82)",
+                border: `1px solid ${color}80`,
+                borderRadius: 4,
+                boxShadow: "0 4px 18px rgba(0,0,0,0.5)",
+                color,
+                fontFamily: "serif",
+                fontSize: 12,
+                letterSpacing: "0.08em",
+                padding: "4px 8px",
+                textShadow: "1px 1px 0 #0a0603",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {player.username}
+            </div>
+          </Html>
+        </group>
       )}
     </RigidBody>
   );
