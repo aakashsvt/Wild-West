@@ -11,6 +11,7 @@ import { Model } from "./CowboyXHorse_GLB_v01";
 import { Model1 } from "./CowboyXHorse_GLB_v08";
 import * as THREE from "three";
 import { PerspectiveCamera } from "three"
+import { Model11 } from "./CowboyXHorse_NLA_V11";
 // const PLAYER_START_POSITION: [number, number, number] = [-340, 5.5787, 410];
 
 const PLAYER_START_POSITION: [number, number, number] = [422.5, 7, -25.1];
@@ -220,8 +221,8 @@ export function PlayerController({ playerRef }: Props) {
 
       else {
 
-        if (kickLeft) playAnimation("KICK_RUN_L", "overlay");
-        else if (kickRight) playAnimation("KICK_RUN_R", "overlay");
+        if (kickLeft) playAnimation("RUN_KICK_LEFT", "overlay");
+        else if (kickRight) playAnimation("RUN_KICK_RIGHT", "overlay");
         playAnimation("RUN");
       }
     } else if (backward) {
@@ -418,7 +419,8 @@ export function PlayerController({ playerRef }: Props) {
       <CapsuleCollider args={[1, 0.5]} position={[0, 0.7, 3]} rotation={[0, 0, Math.PI / 2]} /> */}
       {/* <Model ref={horseRef} />
        */}
-      <Model1 ref={horseRef} />
+      {/* <Model1 ref={horseRef} /> */}
+      <Model11 ref={horseRef} />
     </RigidBody>
   );
 }

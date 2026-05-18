@@ -8,6 +8,7 @@ import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import type { PlayerInfo, RacePlayerState, Vec3Tuple } from "@shared/types/multiplayer";
 import { Model } from "./CowboyXHorse_GLB_v01";
 import { Model1 } from "./CowboyXHorse_GLB_v08";
+import { Model11 } from "./CowboyXHorse_NLA_V11";
 const PLAYER_COLORS = ["#d4a853", "#c0392b", "#2980b9", "#5a8a4a"];
 const PLAYER_START_POSITION: Vec3Tuple = [422.5, 7, -25.1];
 const PLAYER_START_ROTATION_Y = 2.5;
@@ -210,7 +211,8 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
             position={[0, 0.9, 0]}
             restitution={0}
           />
-          <Model1 ref={horseRef} />
+          {/* <Model1 ref={horseRef} /> */}
+          <Model11 ref={horseRef} />
           <Html position={[0, 5.2, 0]} center distanceFactor={35} style={{ pointerEvents: "none" }}>
             <div
               style={{
