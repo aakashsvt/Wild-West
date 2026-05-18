@@ -1,6 +1,9 @@
-import { useEffect } from 'react';
-import { io, type Socket } from 'socket.io-client';
-import type { ClientToServerEvents, ServerToClientEvents } from '@shared/types/multiplayer';
+import { useEffect } from "react";
+import { io, type Socket } from "socket.io-client";
+import type {
+  ClientToServerEvents,
+  ServerToClientEvents,
+} from "@shared/types/multiplayer";
 
 type AppSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -8,10 +11,13 @@ let _socket: AppSocket | null = null;
 
 export function getSocket(): AppSocket {
   if (!_socket) {
-    _socket = io({
-      autoConnect: false,
-      path: '/socket.io',
-    });
+    _socket = io(
+      import.meta.env.VITE_SERVER_URL || "http://100.30.203.216:5000",
+      {
+        autoConnect: false,
+        path: "/socket.io",
+      },
+    );
   }
   return _socket;
 }
