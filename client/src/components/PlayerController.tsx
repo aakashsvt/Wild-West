@@ -209,7 +209,6 @@ export function PlayerController({ playerRef }: Props) {
     // =========================
     // 🎞 ANIMATIONS 
     // =========================
-
     if (jump) {
       playAnimation("JUMP");
 
@@ -220,10 +219,10 @@ export function PlayerController({ playerRef }: Props) {
 
 
       else {
-
+        playAnimation("RUN");
         if (kickLeft) playAnimation("RUN_KICK_LEFT", "overlay");
         else if (kickRight) playAnimation("RUN_KICK_RIGHT", "overlay");
-        playAnimation("RUN");
+
       }
     } else if (backward) {
       playAnimation("WALK");
@@ -368,21 +367,48 @@ export function PlayerController({ playerRef }: Props) {
 
     else {
 
+      if (
+        currentOverlayAction.current === next &&
+        next.isRunning()
+      ) {
+        return;
+      }
+
+      currentOverlayAction.current?.fadeOut(0.1);
+
+      // reduce run influence
+      currentBaseAction.current?.setEffectiveWeight(0.7);
+
       next.reset();
 
       next.setLoop(THREE.LoopOnce, 1);
       next.clampWhenFinished = true;
+      next.setEffectiveTimeScale(1)
+      next.setEffectiveWeight(2);
 
-      next
-        .fadeIn(0.05)
-        .play();
+      next.fadeIn(0.05).play();
 
       currentOverlayAction.current = next;
 
-      // auto remove overlay after finish
-      next.getMixer().addEventListener("finished", () => {
-        next.fadeOut(0.1);
-      });
+      const mixer = next.getMixer();
+
+      const onFinish = (e: any) => {
+        if (e.action === next) {
+
+          // restore run animation influence
+          currentBaseAction.current?.setEffectiveWeight(1);
+
+          next.fadeOut(0.1);
+
+          if (currentOverlayAction.current === next) {
+            currentOverlayAction.current = null;
+          }
+
+          mixer.removeEventListener("finished", onFinish);
+        }
+      };
+
+      mixer.addEventListener("finished", onFinish);
     }
   };
   return (
