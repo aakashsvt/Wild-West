@@ -11,7 +11,7 @@ let _socket: AppSocket | null = null;
 
 export function getSocket(): AppSocket {
   if (!_socket) {
-    _socket = io({
+    _socket = io("http://100.30.203.216", {
       autoConnect: false,
       path: "/socket.io",
     });
