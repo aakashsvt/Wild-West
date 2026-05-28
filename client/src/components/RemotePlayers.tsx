@@ -4,6 +4,7 @@ import { CuboidCollider, RigidBody, RoundCuboidCollider, type RapierRigidBody } 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Euler, MathUtils, Quaternion, Vector3 } from "three";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
+import { localGroundY } from "@/hooks/use-game-store";
 import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import type { PlayerInfo, RacePlayerState, Vec3Tuple } from "@shared/types/multiplayer";
 import { Model } from "./CowboyXHorse_GLB_v01";
@@ -170,9 +171,11 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       currentRotation.current.slerp(targetRotation.current, 0.25);
     }
 
+
+    const y = localGroundY.current ?? currentPosition.current.y;
     bodyRef.current.setNextKinematicTranslation({
       x: currentPosition.current.x,
-      y: currentPosition.current.y,
+      y: y,
       z: currentPosition.current.z,
     });
     bodyRef.current.setNextKinematicRotation({
