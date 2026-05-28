@@ -2,7 +2,7 @@ import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody, RoundCuboidCollider, type RapierRigidBody } from "@react-three/rapier";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Euler, MathUtils, Quaternion, Vector3 } from "three";
+import { Euler, LoopOnce, MathUtils, Quaternion, Vector3 } from "three";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
 import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import type { PlayerInfo, RacePlayerState, Vec3Tuple } from "@shared/types/multiplayer";
@@ -39,6 +39,10 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
   const horseRef = useRef<any>(null);
   const currentAction = useRef<any>(null);
   const lastAnimation = useRef<string | null>(null);
+  const currentOverlayAction = useRef<any>(null);
+  // Last overlay we acted on. Snapshots resend the same overlay name for the
+  // duration of the kick; tracking the last one prevents replaying every frame.
+  const lastOverlay = useRef<string | null>(null);
   const lastSentAt = useRef(0);
   const lastReceivedAt = useRef(0);
   const hasSnapshot = useRef(false);
@@ -79,6 +83,38 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
     lastAnimation.current = name;
   }, []);
 
+  // Mirrors PlayerController's overlay branch: plays the action once on top of
+  // the current base with boosted weight, then restores base weight when done.
+  const playOverlay = useCallback((name: string) => {
+    const actions = horseRef.current?.actions;
+    const next = actions?.[name];
+    if (!next) return;
+    if (currentOverlayAction.current === next && next.isRunning?.()) return;
+
+    currentOverlayAction.current?.fadeOut?.(0.1);
+    currentAction.current?.setEffectiveWeight?.(0.7);
+
+    next.reset();
+    next.setLoop(LoopOnce, 1);
+    next.clampWhenFinished = true;
+    next.setEffectiveTimeScale(1);
+    next.setEffectiveWeight(2);
+    next.fadeIn(0.05).play();
+    currentOverlayAction.current = next;
+
+    const mixer = next.getMixer();
+    const onFinish = (e: any) => {
+      if (e.action !== next) return;
+      currentAction.current?.setEffectiveWeight?.(1);
+      next.fadeOut(0.1);
+      if (currentOverlayAction.current === next) {
+        currentOverlayAction.current = null;
+      }
+      mixer.removeEventListener("finished", onFinish);
+    };
+    mixer.addEventListener("finished", onFinish);
+  }, []);
+
   const onPlayerState = useCallback(
     (state: RacePlayerState) => {
       if (state.socketId !== player.socketId || state.sentAt <= lastSentAt.current) return;
@@ -106,12 +142,26 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       );
 
       playAnimation(state.animation);
+
+      // Overlay (kick): sender keeps publishing the same name for the duration
+      // of the action, so only trigger on the transition. Clear the latch when
+      // the sender clears the overlay so the next kick of the same kind fires.
+      const incomingOverlay = state.overlay ?? null;
+      if (incomingOverlay) {
+        if (incomingOverlay !== lastOverlay.current) {
+          playOverlay(incomingOverlay);
+          lastOverlay.current = incomingOverlay;
+        }
+      } else {
+        lastOverlay.current = null;
+      }
+
       if (!isVisibleRef.current) {
         isVisibleRef.current = true;
         setIsVisible(true);
       }
     },
-    [player.socketId, playAnimation],
+    [player.socketId, playAnimation, playOverlay],
   );
 
   useSocketEvent("race:player-state", onPlayerState);
@@ -170,7 +220,10 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       currentRotation.current.slerp(targetRotation.current, 0.25);
     }
 
-
+    // X/Z come straight from the websocket snapshot (no velocity gain, no
+    // overshoot — eliminates the random position shift). Y is read back off
+    // the body itself and re-applied unchanged, so gravity + the track
+    // collider are the only things that ever decide vertical position.
     const bodyY = bodyRef.current.translation().y;
     bodyRef.current.setTranslation(
       {
@@ -209,7 +262,9 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       enabledRotations={[false, false, false]}
       ccd
     >
-
+      {/* Collider lives outside the isVisible gate so the body always has a
+          shape to collide with the track — otherwise the dynamic body would
+          fall through the world before the first snapshot arrives. */}
       <RoundCuboidCollider
         args={[1.4, 0.7, 3, 0.2]}
         position={[0, 0.9, 0]}

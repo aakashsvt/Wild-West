@@ -5,7 +5,7 @@ export interface PlayerInfo {
   isReady: boolean;
 }
 
-export type LobbyStatus = 'waiting' | 'countdown' | 'starting';
+export type LobbyStatus = "waiting" | "countdown" | "starting";
 
 export interface LobbyRoom {
   roomId: string;
@@ -19,7 +19,7 @@ export interface StandingEntry {
   username: string;
   colorIndex: number;
   score: number;
-  position: number;   // 1-based, server-assigned
+  position: number; // 1-based, server-assigned
   finished: boolean;
 }
 
@@ -39,6 +39,7 @@ export interface RacePlayerSnapshot {
   velocity: Vec3Tuple;
   speed: number;
   animation: string;
+  overlay?: string | null;
   sentAt: number;
 }
 
@@ -47,20 +48,20 @@ export interface RacePlayerState extends RacePlayerSnapshot {
 }
 
 export interface ClientToServerEvents {
-  'lobby:join':    (payload: { username: string }) => void;
-  'lobby:ready':   () => void;
-  'lobby:leave':   () => void;
-  'race:update':   (payload: { score: number; timeTaken: number }) => void;
-  'race:state':    (payload: RacePlayerSnapshot) => void;
-  'race:finish':   (payload: { score: number; timeTaken: number }) => void;
+  "lobby:join": (payload: { username: string }) => void;
+  "lobby:ready": () => void;
+  "lobby:leave": () => void;
+  "race:update": (payload: { score: number; timeTaken: number }) => void;
+  "race:state": (payload: RacePlayerSnapshot) => void;
+  "race:finish": (payload: { score: number; timeTaken: number }) => void;
 }
 
 export interface ServerToClientEvents {
-  'lobby:state':     (room: LobbyRoom) => void;
-  'lobby:countdown': (secondsRemaining: number) => void;
-  'lobby:start':     (payload: { raceId: string }) => void;
-  'lobby:error':     (message: string) => void;
-  'race:standings':  (standings: StandingEntry[]) => void;
-  'race:player-state': (state: RacePlayerState) => void;
-  'race:results':    (results: RaceResultEntry[]) => void;
+  "lobby:state": (room: LobbyRoom) => void;
+  "lobby:countdown": (secondsRemaining: number) => void;
+  "lobby:start": (payload: { raceId: string }) => void;
+  "lobby:error": (message: string) => void;
+  "race:standings": (standings: StandingEntry[]) => void;
+  "race:player-state": (state: RacePlayerState) => void;
+  "race:results": (results: RaceResultEntry[]) => void;
 }

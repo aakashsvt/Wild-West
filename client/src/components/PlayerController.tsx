@@ -43,6 +43,10 @@ export function PlayerController({ playerRef }: Props) {
   const currentBaseAction = useRef<any>(null);
   const currentOverlayAction = useRef<any>(null);
   const currentAnimationName = useRef("IDLE");
+  // Active overlay (kick) name so it can be broadcast alongside the base
+  // animation. currentAnimationName tracks only base animations; without this
+  // ref, peers never see kicks.
+  const currentOverlayName = useRef<string | null>(null);
   const lastNetworkStateAt = useRef(0);
   const body = useRef<RapierRigidBody>(null);
   const [, getKeys] = useKeyboardControls();
@@ -309,6 +313,7 @@ export function PlayerController({ playerRef }: Props) {
           velocity: [velocity.x, linvel.y, velocity.z],
           speed: displaySpeedKmh,
           animation: currentAnimationName.current,
+          overlay: currentOverlayName.current,
           sentAt: Date.now(),
         });
       }
@@ -389,6 +394,7 @@ export function PlayerController({ playerRef }: Props) {
       next.fadeIn(0.05).play();
 
       currentOverlayAction.current = next;
+      currentOverlayName.current = name;
 
       const mixer = next.getMixer();
 
@@ -402,6 +408,7 @@ export function PlayerController({ playerRef }: Props) {
 
           if (currentOverlayAction.current === next) {
             currentOverlayAction.current = null;
+            currentOverlayName.current = null;
           }
 
           mixer.removeEventListener("finished", onFinish);
