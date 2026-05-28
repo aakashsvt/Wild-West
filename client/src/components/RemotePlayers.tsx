@@ -4,7 +4,6 @@ import { CuboidCollider, RigidBody, RoundCuboidCollider, type RapierRigidBody } 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Euler, MathUtils, Quaternion, Vector3 } from "three";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
-import { localGroundY } from "@/hooks/use-game-store";
 import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import type { PlayerInfo, RacePlayerState, Vec3Tuple } from "@shared/types/multiplayer";
 import { Model } from "./CowboyXHorse_GLB_v01";
@@ -172,18 +171,24 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
     }
 
 
-    const y = localGroundY.current ?? currentPosition.current.y;
-    bodyRef.current.setNextKinematicTranslation({
-      x: currentPosition.current.x,
-      y: y,
-      z: currentPosition.current.z,
-    });
-    bodyRef.current.setNextKinematicRotation({
-      x: currentRotation.current.x,
-      y: currentRotation.current.y,
-      z: currentRotation.current.z,
-      w: currentRotation.current.w,
-    });
+    const bodyY = bodyRef.current.translation().y;
+    bodyRef.current.setTranslation(
+      {
+        x: currentPosition.current.x,
+        y: bodyY,
+        z: currentPosition.current.z,
+      },
+      true,
+    );
+    bodyRef.current.setRotation(
+      {
+        x: currentRotation.current.x,
+        y: currentRotation.current.y,
+        z: currentRotation.current.z,
+        w: currentRotation.current.w,
+      },
+      true,
+    );
   });
 
   const color = PLAYER_COLORS[player.colorIndex] ?? "#e8d5b0";
@@ -191,7 +196,6 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
   return (
     <RigidBody
       ref={bodyRef}
-      type="kinematicPosition"
       position={[startPosition.x, startPosition.y, startPosition.z]}
       rotation={[0, PLAYER_START_ROTATION_Y, 0]}
       colliders={false}
@@ -204,16 +208,15 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       dominanceGroup={10}
       enabledRotations={[false, false, false]}
       ccd
-
-
     >
+
+      <RoundCuboidCollider
+        args={[1.4, 0.7, 3, 0.2]}
+        position={[0, 0.9, 0]}
+        restitution={0}
+      />
       {isVisible && (
         <group>
-          <RoundCuboidCollider
-            args={[1.4, 0.7, 3, 0.2]}
-            position={[0, 0.9, 0]}
-            restitution={0}
-          />
           {/* <Model1 ref={horseRef} /> */}
           <Model11 ref={horseRef} />
           <Html position={[0, 5.2, 0]} center distanceFactor={35} style={{ pointerEvents: "none" }}>

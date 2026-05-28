@@ -3,7 +3,7 @@ import { RigidBody, type RapierRigidBody, CuboidCollider, CapsuleCollider, Round
 import { useEffect, useMemo, useRef } from "react";
 import { Vector3, Quaternion, Euler } from "three";
 import { useKeyboardControls } from "@react-three/drei";
-import { localGroundY, useGameStore } from "@/hooks/use-game-store";
+import { useGameStore } from "@/hooks/use-game-store";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
 import { getSocket } from "@/hooks/use-socket";
 import type { Vec3Tuple } from "@shared/types/multiplayer";
@@ -82,15 +82,6 @@ export function PlayerController({ playerRef }: Props) {
   useEffect(() => {
     playerRef.current = body.current
   }, [playerRef])
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const rb = body.current;
-      if (!rb) return;
-      localGroundY.current = rb.translation().y;
-    }, 2000)
-    return () => clearTimeout(timer);
-  }, [])
   useEffect(() => {
     const spawnPosition = startTransform.position;
     const spawnEuler = startTransform.euler;
@@ -215,13 +206,6 @@ export function PlayerController({ playerRef }: Props) {
       },
       true
     )
-
-
-    if (localGroundY.current !== null) {
-      const t = rb.translation()
-      rb.setTranslation({ x: t.x, y: localGroundY.current, z: t.z }, true)
-      rb.setLinvel({ x: velocity.x, y: 0, z: velocity.z }, true)
-    }
     // =========================
     // 🎞 ANIMATIONS 
     // =========================
