@@ -22,7 +22,7 @@ import { Model11 } from "./CowboyXHorse_NLA_V11";
 
 const PLAYER_START_POSITION: [number, number, number] = [422.5, 7, -25.1];
 
-const MAX_SPEED = 70;
+const MAX_SPEED = 90;
 const ACCELERATION = 50;
 const TURN_SPEED = 2;
 const BRAKE_FORCE = 5;
