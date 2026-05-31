@@ -2,7 +2,14 @@ import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody, RoundCuboidCollider, type RapierRigidBody } from "@react-three/rapier";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Euler, LoopOnce, MathUtils, Quaternion, Vector3 } from "three";
+import {
+  Euler,
+  type KeyframeTrack,
+  LoopOnce,
+  MathUtils,
+  Quaternion,
+  Vector3,
+} from "three";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
 import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import type { PlayerInfo, RacePlayerState, Vec3Tuple } from "@shared/types/multiplayer";
@@ -83,16 +90,36 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
     lastAnimation.current = name;
   }, []);
 
-  // Mirrors PlayerController's overlay branch: plays the action once on top of
-  // the current base with boosted weight, then restores base weight when done.
+  // Mirrors PlayerController's overlay branch. The kick clip is masked to
+  // leg-only tracks on first play so it never competes with RUN for the
+  // rider's upper body — full kick weight, zero torso displacement.
   const playOverlay = useCallback((name: string) => {
     const actions = horseRef.current?.actions;
     const next = actions?.[name];
     if (!next) return;
     if (currentOverlayAction.current === next && next.isRunning?.()) return;
 
+    const overlayClip = next.getClip();
+    if (!(overlayClip as any).__legMasked) {
+      const include = /leg|foot|thigh|knee|shin|ankle|toe|calf|tibia|fibula/i;
+      const exclude =
+        /hip|pelvis|root|spine|neck|head|chest|shoulder|arm|hand|finger|torso/i;
+      const original = overlayClip.tracks;
+      const filtered = original.filter(
+        (t: KeyframeTrack) => include.test(t.name) && !exclude.test(t.name),
+      );
+      if (filtered.length > 0) {
+        overlayClip.tracks = filtered;
+      } else {
+        console.warn(
+          "[kick] No leg tracks matched; clip kept whole. Bones:",
+          original.map((t: KeyframeTrack) => t.name),
+        );
+      }
+      (overlayClip as any).__legMasked = true;
+    }
+
     currentOverlayAction.current?.fadeOut?.(0.1);
-    currentAction.current?.setEffectiveWeight?.(0.7);
 
     next.reset();
     next.setLoop(LoopOnce, 1);
@@ -105,7 +132,6 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
     const mixer = next.getMixer();
     const onFinish = (e: any) => {
       if (e.action !== next) return;
-      currentAction.current?.setEffectiveWeight?.(1);
       next.fadeOut(0.1);
       if (currentOverlayAction.current === next) {
         currentOverlayAction.current = null;
