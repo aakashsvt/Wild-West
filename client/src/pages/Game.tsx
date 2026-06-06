@@ -1,4 +1,3 @@
-import { useAuthStore } from "@/store/auth-store";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import * as THREE from "three";
@@ -8,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 import type { RapierRigidBody } from "@react-three/rapier"
 import { PlayerController } from "@/components/PlayerController";
+import { RemotePlayers } from "@/components/RemotePlayers";
 import { Track } from "@/components/Track";
 import { Model } from "@/components/Track1";
 import { GameHUD } from "@/components/GameHUD";
@@ -16,7 +16,7 @@ import { useGameStore } from "@/hooks/use-game-store";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
 import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import { Loader2 } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
@@ -24,12 +24,12 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 
 // ── Western palette — matches Home and LoadingScreen ─────────────────────────
 const W = {
-  bg:         "#0a0603",
+  bg: "#0a0603",
   borderWarm: "#6b3820",
   borderGold: "#a07030",
-  gold:       "#c8922a",
+  gold: "#c8922a",
   goldBright: "#d4a853",
-  cream:      "#e8d5b0",
+  cream: "#e8d5b0",
   creamMuted: "#b89a72",
 } as const;
 
@@ -219,7 +219,7 @@ void main() {
     float t = i / 20.0;
 
     // 🔥 REDUCED stretch (0.6 instead of 1.0)
-    vec2 offset = (uv - vec2(0.5)) * t * strength * edge * 0.6;
+    vec2 offset = (uv - vec2(0.5)) * t * strength * edge * 0.2;
 
     color += texture2D(tDiffuse, uv - offset);
     total += 1.0;
@@ -288,9 +288,9 @@ export function MotionBlurEffect({ speedRef, playerRef }: Props) {
 
     // 🎯 Asphalt-style intensity curve
     const intensity = THREE.MathUtils.clamp(
-      Math.pow(speed, 1.3) * 0.15,
+      Math.pow(speed, 1) * 0.01,
       0.0,
-      1.2
+      1
     )
 
     blur.uniforms.strength.value = intensity
@@ -306,14 +306,8 @@ export function MotionBlurEffect({ speedRef, playerRef }: Props) {
 type GamePhase = "loading" | "countdown" | "done";
 
 export default function Game() {
-  const [_loc, setLocation] = useLocation();
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { resetGame } = useGameStore();
   const playerRef = useRef<RapierRigidBody | null>(null)
-
-  useEffect(() => {
-    if (!isAuthenticated) setLocation("/");
-  }, [isAuthenticated]);
   const speedRef = useRef(0)
 
   const { speed, score, timeElapsed, isPlaying, isGameOver } = useGameStore()
@@ -328,11 +322,6 @@ export default function Game() {
   const handleSceneReady = useCallback(() => setPhase("countdown"), []);
   const handleOverlayDone = useCallback(() => setPhase("done"), []);
 
-
-  // Leave the room cleanly when the player navigates away from the game
-  useEffect(() => {
-    return () => { getSocket().emit('lobby:leave'); };
-  }, []);
 
   // Emit periodic score update while racing
   useEffect(() => {
@@ -358,6 +347,8 @@ export default function Game() {
     { name: "left", keys: ["ArrowLeft", "KeyA"] },
     { name: "right", keys: ["ArrowRight", "KeyD"] },
     { name: "jump", keys: ["Space"] },
+    { name: "kickLeft", keys: ["KeyQ"] },
+    { name: "kickRight", keys: ["KeyE"] },
   ], []);
 
   return (
@@ -393,6 +384,7 @@ export default function Game() {
             <Environment files="/models/Cannon_Exterior.hdr" background={true} blur={0} />
             <Physics gravity={[0, -9.81, 0]} debug={false}>
               <PlayerController playerRef={playerRef} />
+              <RemotePlayers />
               <Model />
               <SceneReadyProbe onReady={handleSceneReady} />
             </Physics>

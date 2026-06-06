@@ -6,7 +6,7 @@ export function Horse(props: any) {
     const group = useRef<any>()
 
     const horse = useFBX("/models/horse1.fbx")
-    const cowboy = useGLTF("/models/CowboyXHorse_GLB_v01.glb")
+    const cowboy = useGLTF("/models/CowboyXHorse_GLB_V08.glb")
     const { animations } = horse
 
     const { actions } = useAnimations(animations, group)
@@ -30,4 +30,4 @@ export function Horse(props: any) {
     )
 }
 
-useGLTF.preload("/models/CowboyXHorse_GLB_v01.glb");
+useGLTF.preload("/models/CowboyXHorse_GLB_V08.glb");
