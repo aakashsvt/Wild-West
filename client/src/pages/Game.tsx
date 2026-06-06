@@ -1,3 +1,4 @@
+import { useAuthStore } from "@/store/auth-store";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import * as THREE from "three";
@@ -15,7 +16,7 @@ import { useGameStore } from "@/hooks/use-game-store";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
 import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import { Loader2 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
@@ -305,8 +306,14 @@ export function MotionBlurEffect({ speedRef, playerRef }: Props) {
 type GamePhase = "loading" | "countdown" | "done";
 
 export default function Game() {
+  const [_loc, setLocation] = useLocation();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { resetGame } = useGameStore();
   const playerRef = useRef<RapierRigidBody | null>(null)
+
+  useEffect(() => {
+    if (!isAuthenticated) setLocation("/");
+  }, [isAuthenticated]);
   const speedRef = useRef(0)
 
   const { speed, score, timeElapsed, isPlaying, isGameOver } = useGameStore()
@@ -321,6 +328,11 @@ export default function Game() {
   const handleSceneReady = useCallback(() => setPhase("countdown"), []);
   const handleOverlayDone = useCallback(() => setPhase("done"), []);
 
+
+  // Leave the room cleanly when the player navigates away from the game
+  useEffect(() => {
+    return () => { getSocket().emit('lobby:leave'); };
+  }, []);
 
   // Emit periodic score update while racing
   useEffect(() => {

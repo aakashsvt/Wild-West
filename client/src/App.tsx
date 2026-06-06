@@ -1,6 +1,6 @@
 
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -12,11 +12,14 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Game from "@/pages/Game";
 import Lobby from "@/pages/Lobby";
+import Salon from "@/pages/Salon";
+import { useAuthStore } from "@/store/auth-store";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home}/>
+      <Route path="/salon" component={Salon}/>
       <Route path="/lobby" component={Lobby}/>
       <Route path="/game" component={Game}/>
       <Route component={NotFound} />
@@ -26,6 +29,11 @@ function Router() {
 
 function App() {
   const [assetsLoaded, setAssetsLoaded] = useState(false);
+  const hydrateToken = useAuthStore((s) => s.hydrateToken);
+
+  useEffect(() => {
+    hydrateToken();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
