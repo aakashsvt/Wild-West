@@ -206,22 +206,20 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
     currentRotation.current.copy(startRotation);
     targetRotation.current.copy(startRotation);
 
-    bodyRef.current?.setTranslation(
+    bodyRef.current?.setNextKinematicTranslation(
       {
         x: startPosition.x,
         y: startPosition.y,
         z: startPosition.z,
       },
-      true,
     );
-    bodyRef.current?.setRotation(
+    bodyRef.current?.setNextKinematicRotation(
       {
         x: startRotation.x,
         y: startRotation.y,
         z: startRotation.z,
         w: startRotation.w,
       },
-      true,
     );
   }, [startPosition, startRotation]);
 
@@ -245,27 +243,22 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       currentRotation.current.slerp(targetRotation.current, 0.25);
     }
 
-    // X/Z come straight from the websocket snapshot (no velocity gain, no
-    // overshoot — eliminates the random position shift). Y is read back off
-    // the body itself and re-applied unchanged, so gravity + the track
-    // collider are the only things that ever decide vertical position.
-    const bodyY = bodyRef.current.translation().y;
-    bodyRef.current.setTranslation(
+    // Move remotes as kinematic bodies so Rapier can solve contacts against
+    // the local dynamic horse instead of treating updates as teleports.
+    bodyRef.current.setNextKinematicTranslation(
       {
         x: currentPosition.current.x,
-        y: bodyY,
+        y: currentPosition.current.y,
         z: currentPosition.current.z,
       },
-      true,
     );
-    bodyRef.current.setRotation(
+    bodyRef.current.setNextKinematicRotation(
       {
         x: currentRotation.current.x,
         y: currentRotation.current.y,
         z: currentRotation.current.z,
         w: currentRotation.current.w,
       },
-      true,
     );
   });
 
@@ -274,6 +267,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
   return (
     <RigidBody
       ref={bodyRef}
+      type="kinematicPosition"
       position={[startPosition.x, startPosition.y, startPosition.z]}
       rotation={[0, PLAYER_START_ROTATION_Y, 0]}
       colliders={false}
