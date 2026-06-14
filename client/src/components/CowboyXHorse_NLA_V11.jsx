@@ -18,7 +18,6 @@ export const Model11 = forwardRef((props, ref) => {
   );
   const { nodes, materials } = useGraph(clone);
   const { actions } = useAnimations(localAnimations, group);
-  console.log("act", actions);
   useImperativeHandle(ref, () => ({
     actions,
   }));

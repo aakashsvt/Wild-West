@@ -21,7 +21,7 @@ import { Model11 } from "./CowboyXHorse_NLA_V11";
 import { isRemoteKicking } from "@/lib/remoke-kicks";
 // const PLAYER_START_POSITION: [number, number, number] = [-340, 5.5787, 410];
 
-const PLAYER_START_POSITION: [number, number, number] = [422.5, 7, -25.1];
+const PLAYER_START_POSITION: [number, number, number] = [422.5, 5, -25.1];
 
 const MAX_SPEED = 90;
 const ACCELERATION = 50;
@@ -334,7 +334,7 @@ export function PlayerController({ playerRef }: Props) {
   // const playAnimation = (name: string) => {
   //   const actions = horseRef.current?.actions;
   //   if (!actions || !actions[name]) return;
-  //   console.log("Playing animation:", actions);
+
   //   const next = actions[name];
 
   //   if (currentAction.current === next) return;
@@ -444,7 +444,7 @@ export function PlayerController({ playerRef }: Props) {
       // position={[500, 6.5787, 0]}
       rotation={[0, PLAYER_START_ROTATION_Y, 0]}
       colliders={false}
-      mass={0.1}
+      mass={10}
       friction={0.5}
       restitution={0}
       linearDamping={1}
