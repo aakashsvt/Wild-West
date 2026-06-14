@@ -147,7 +147,11 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       lastSentAt.current = state.sentAt;
       lastReceivedAt.current = performance.now();
       hasSnapshot.current = true;
-
+      console.log({
+        networkY: state.position[1],
+        currentY: currentPosition.current.y,
+        bodyY: bodyRef.current?.translation().y,
+      });
       basePosition.current.set(
         state.position[0],
         state.position[1],
@@ -266,7 +270,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
 
     collisionBody.current.setNextKinematicTranslation({
       x: currentPosition.current.x,
-      y: bodyY,
+      y: currentPosition.current.y,
       z: currentPosition.current.z,
     });
 
@@ -366,11 +370,13 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
           args={[1.4, 0.7, 5, 0.2]}
           position={[0, 0.9, 1]}
           restitution={0}
+
         />
         <RoundCuboidCollider
           args={[1.4, 1.7, 2, 0.2]}
           position={[0, 7, 0]}
           restitution={0}
+
         />
         <RoundCuboidCollider
           args={[1.4, 2.7, 5, 0.2]}

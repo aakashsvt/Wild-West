@@ -314,7 +314,13 @@ export function PlayerController({ playerRef }: Props) {
       const socket = getSocket();
       const pos = rb.translation();
       const rot = rb.rotation();
-
+      console.log("sending network state", {
+        position: [pos.x, pos.y, pos.z],
+        rotation: [rot.x, rot.y, rot.z, rot.w], velocity: [velocity.x, linvel.y, velocity.z],
+        speed: displaySpeedKmh,
+        animation: currentAnimationName.current,
+        overlay: currentOverlayName.current,
+      });
       if (socket.connected) {
         socket.volatile.emit("race:state", {
           position: [pos.x, pos.y, pos.z],
@@ -444,7 +450,7 @@ export function PlayerController({ playerRef }: Props) {
       // position={[500, 6.5787, 0]}
       rotation={[0, PLAYER_START_ROTATION_Y, 0]}
       colliders={false}
-      mass={10}
+      mass={100}
       friction={0.5}
       restitution={0}
       linearDamping={1}
@@ -453,17 +459,6 @@ export function PlayerController({ playerRef }: Props) {
       dominanceGroup={10}
       enabledRotations={[false, false, false]} // Allow some tilt? Maybe lock X/Z for simpler arcade feel
       ccd
-      onCollisionEnter={({ other }) => {
-        if (!other.rigidBody) return;
-        if (!isRemoteKicking(other.rigidBody)) return;
-        const now = performance.now();
-        if (now - lastKickedAt.current < 500) return;
-
-        lastKickedAt.current = now;
-        const rb = body.current;
-        if (!rb) return; const lv = rb.linvel();
-        rb.setLinvel({ x: lv.x * 0.5, y: lv.y, z: lv.z * 0.5 }, true);
-      }}
     >
       {/* <CuboidCollider args={[0.5, 0.5, 2.2]} position={[0, 0.5, 0]} restitution={0.2} /> */}
       {/* <CuboidCollider args={[1.5, 0.5, 0.5]} position={[0, 0.5, 2]} />
