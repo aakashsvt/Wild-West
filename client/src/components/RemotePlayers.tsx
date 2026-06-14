@@ -1,7 +1,7 @@
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody, RoundCuboidCollider, type RapierRigidBody } from "@react-three/rapier";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   Euler,
   type KeyframeTrack,
@@ -21,7 +21,6 @@ const PLAYER_COLORS = ["#d4a853", "#c0392b", "#2980b9", "#5a8a4a"];
 const PLAYER_START_POSITION: Vec3Tuple = [422.5, 7, -25.1];
 const PLAYER_START_ROTATION_Y = 2.5;
 const START_LANE_SPACING = 5;
-const STALE_PLAYER_MS = 5000;
 const MAX_EXTRAPOLATION_SECONDS = 0.12;
 
 type RemoteRiderProps = {
@@ -54,8 +53,6 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
   const lastSentAt = useRef(0);
   const lastReceivedAt = useRef(0);
   const hasSnapshot = useRef(false);
-  const isVisibleRef = useRef(false);
-  const [isVisible, setIsVisible] = useState(false);
 
   const startPosition = useMemo(
     () => getLaneStartPosition(playerIndex, playerCount),
@@ -186,11 +183,6 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       if (bodyRef.current) {
         setRemoteKicking(bodyRef.current, !!incomingOverlay);
       }
-
-      if (!isVisibleRef.current) {
-        isVisibleRef.current = true;
-        setIsVisible(true);
-      }
     },
     [player.socketId, playAnimation, playOverlay],
   );
@@ -238,14 +230,6 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
 
     const now = performance.now();
     const ageMs = now - lastReceivedAt.current;
-    if (ageMs > STALE_PLAYER_MS) {
-      if (isVisibleRef.current) {
-        isVisibleRef.current = false;
-        setIsVisible(false);
-      }
-      return;
-    }
-
     const extrapolationSeconds = Math.min(ageMs / 1000, MAX_EXTRAPOLATION_SECONDS);
     targetPosition.current.copy(basePosition.current).addScaledVector(
       velocity.current,
@@ -303,9 +287,6 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       enabledRotations={[false, false, false]}
       ccd
     >
-      {/* Collider lives outside the isVisible gate so the body always has a
-          shape to collide with the track — otherwise the dynamic body would
-          fall through the world before the first snapshot arrives. */}
       <RoundCuboidCollider
         args={[1.4, 0.7, 3, 0.2]}
         position={[0, 0.9, 0]}
@@ -316,31 +297,29 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
         position={[0, 2.9, 0]}
         restitution={0}
       />
-      {isVisible && (
-        <group>
-          {/* <Model1 ref={horseRef} /> */}
-          <Model11 ref={horseRef} />
-          <Html position={[0, 5.2, 0]} center distanceFactor={35} style={{ pointerEvents: "none" }}>
-            <div
-              style={{
-                background: "rgba(19, 10, 4, 0.82)",
-                border: `1px solid ${color}80`,
-                borderRadius: 4,
-                boxShadow: "0 4px 18px rgba(0,0,0,0.5)",
-                color,
-                fontFamily: "serif",
-                fontSize: 12,
-                letterSpacing: "0.08em",
-                padding: "4px 8px",
-                textShadow: "1px 1px 0 #0a0603",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {player.username}
-            </div>
-          </Html>
-        </group>
-      )}
+      <group>
+        {/* <Model1 ref={horseRef} /> */}
+        <Model11 ref={horseRef} />
+        <Html position={[0, 5.2, 0]} center distanceFactor={35} style={{ pointerEvents: "none" }}>
+          <div
+            style={{
+              background: "rgba(19, 10, 4, 0.82)",
+              border: `1px solid ${color}80`,
+              borderRadius: 4,
+              boxShadow: "0 4px 18px rgba(0,0,0,0.5)",
+              color,
+              fontFamily: "serif",
+              fontSize: 12,
+              letterSpacing: "0.08em",
+              padding: "4px 8px",
+              textShadow: "1px 1px 0 #0a0603",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {player.username}
+          </div>
+        </Html>
+      </group>
     </RigidBody>
   );
 }
