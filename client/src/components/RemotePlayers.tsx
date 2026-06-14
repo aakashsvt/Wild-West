@@ -16,6 +16,7 @@ import type { PlayerInfo, RacePlayerState, Vec3Tuple } from "@shared/types/multi
 import { Model } from "./CowboyXHorse_GLB_v01";
 import { Model1 } from "./CowboyXHorse_GLB_v08";
 import { Model11 } from "./CowboyXHorse_NLA_V11";
+import { registerRemoteBody, setRemoteKicking, unregisterRemoteBody } from "@/lib/remoke-kicks";
 const PLAYER_COLORS = ["#d4a853", "#c0392b", "#2980b9", "#5a8a4a"];
 const PLAYER_START_POSITION: Vec3Tuple = [422.5, 7, -25.1];
 const PLAYER_START_ROTATION_Y = 2.5;
@@ -182,6 +183,10 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
         lastOverlay.current = null;
       }
 
+      if (bodyRef.current) {
+        setRemoteKicking(bodyRef.current, !!incomingOverlay);
+      }
+
       if (!isVisibleRef.current) {
         isVisibleRef.current = true;
         setIsVisible(true);
@@ -191,6 +196,16 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
   );
 
   useSocketEvent("race:player-state", onPlayerState);
+
+  useEffect(() => {
+    const rb = bodyRef.current;
+    if (!rb) return;
+    registerRemoteBody(rb, player.socketId);
+    return () => {
+      unregisterRemoteBody(rb);
+    }
+
+  }, [player.socketId]);
 
   useEffect(() => {
     currentPosition.current.copy(startPosition);
@@ -294,6 +309,11 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       <RoundCuboidCollider
         args={[1.4, 0.7, 3, 0.2]}
         position={[0, 0.9, 0]}
+        restitution={0}
+      />
+      <RoundCuboidCollider
+        args={[1.4, 2.7, 3, 0.2]}
+        position={[0, 2.9, 0]}
         restitution={0}
       />
       {isVisible && (

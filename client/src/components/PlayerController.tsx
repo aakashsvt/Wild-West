@@ -18,6 +18,7 @@ import { Model1 } from "./CowboyXHorse_GLB_v08";
 import * as THREE from "three";
 import { PerspectiveCamera } from "three";
 import { Model11 } from "./CowboyXHorse_NLA_V11";
+import { isRemoteKicking } from "@/lib/remoke-kicks";
 // const PLAYER_START_POSITION: [number, number, number] = [-340, 5.5787, 410];
 
 const PLAYER_START_POSITION: [number, number, number] = [422.5, 7, -25.1];
@@ -52,6 +53,7 @@ export function PlayerController({ playerRef }: Props) {
   // ref, peers never see kicks.
   const currentOverlayName = useRef<string | null>(null);
   const lastNetworkStateAt = useRef(0);
+  const lastKickedAt = useRef(0);
   const body = useRef<RapierRigidBody>(null);
   const [, getKeys] = useKeyboardControls();
   const { setSpeed, addScore, isPlaying } = useGameStore();
@@ -237,7 +239,8 @@ export function PlayerController({ playerRef }: Props) {
       playAnimation("TURN_LEFT");
     } else if (right) {
       playAnimation("TURN_RIGHT");
-    } else {
+    }
+    else {
       if (currentSpeed > 15) playAnimation("RUN");
       else if (currentSpeed > 6) playAnimation("WALK");
       else playAnimation("IDLE");
@@ -450,6 +453,17 @@ export function PlayerController({ playerRef }: Props) {
       dominanceGroup={10}
       enabledRotations={[false, false, false]} // Allow some tilt? Maybe lock X/Z for simpler arcade feel
       ccd
+      onCollisionEnter={({ other }) => {
+        if (!other.rigidBody) return;
+        if (!isRemoteKicking(other.rigidBody)) return;
+        const now = performance.now();
+        if (now - lastKickedAt.current < 500) return;
+
+        lastKickedAt.current = now;
+        const rb = body.current;
+        if (!rb) return; const lv = rb.linvel();
+        rb.setLinvel({ x: lv.x * 0.5, y: lv.y, z: lv.z * 0.5 }, true);
+      }}
     >
       {/* <CuboidCollider args={[0.5, 0.5, 2.2]} position={[0, 0.5, 0]} restitution={0.2} /> */}
       {/* <CuboidCollider args={[1.5, 0.5, 0.5]} position={[0, 0.5, 2]} />
@@ -461,6 +475,22 @@ export function PlayerController({ playerRef }: Props) {
         args={[1.4, 0.7, 3, 0.2]}
         position={[0, 0.9, 0]}
         restitution={0}
+      />
+      <RoundCuboidCollider
+        args={[1.4, 2.7, 3, 0.2]}
+        position={[0, 2.9, 0]}
+        restitution={0}
+        onCollisionEnter={({ other }) => {
+          if (!other.rigidBody) return;
+          if (!isRemoteKicking(other.rigidBody)) return;
+          const now = performance.now();
+          if (now - lastKickedAt.current < 500) return;
+
+          lastKickedAt.current = now;
+          const rb = body.current;
+          if (!rb) return; const lv = rb.linvel();
+          rb.setLinvel({ x: lv.x * 0.5, y: lv.y, z: lv.z * 0.5 }, true);
+        }}
       />
       {/* <CapsuleCollider args={[1, 0.5]} position={[0, 0.7, -2]} rotation={[0, 0, Math.PI / 2]} />
       <CapsuleCollider args={[1, 0.5]} position={[0, 0.7, 3]} rotation={[0, 0, Math.PI / 2]} /> */}
