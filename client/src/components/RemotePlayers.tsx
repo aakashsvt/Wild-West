@@ -248,20 +248,22 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
 
     // Move remotes as kinematic bodies so Rapier can solve contacts against
     // the local dynamic horse instead of treating updates as teleports.
-    bodyRef.current.setNextKinematicTranslation(
+    const bodyY = bodyRef.current.translation().y;
+    bodyRef.current.setTranslation(
       {
         x: currentPosition.current.x,
-        y: currentPosition.current.y,
+        y: bodyY,
         z: currentPosition.current.z,
       },
+      true,
     );
-    bodyRef.current.setNextKinematicRotation(
+    bodyRef.current.setRotation(
       {
         x: currentRotation.current.x,
         y: currentRotation.current.y,
         z: currentRotation.current.z,
         w: currentRotation.current.w,
-      },
+      }, true,
     );
   });
 
@@ -289,10 +291,14 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
         position={[0, 0.9, 1]}
         restitution={0}
       />
-
+      <RoundCuboidCollider
+        args={[1.4, 1.7, 2, 0.2]}
+        position={[0, 7, 0]}
+        restitution={0}
+      />
       <RoundCuboidCollider
         args={[1.4, 2.7, 5, 0.2]}
-        position={[0, 2.9, 0]}
+        position={[0, 2.9, 1]}
         restitution={0}
       />
       <group>
