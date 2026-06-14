@@ -206,20 +206,23 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
     currentRotation.current.copy(startRotation);
     targetRotation.current.copy(startRotation);
 
-    bodyRef.current?.setNextKinematicTranslation(
+
+    bodyRef.current?.setTranslation(
       {
         x: startPosition.x,
         y: startPosition.y,
         z: startPosition.z,
       },
+      true,
     );
-    bodyRef.current?.setNextKinematicRotation(
+    bodyRef.current?.setRotation(
       {
         x: startRotation.x,
         y: startRotation.y,
         z: startRotation.z,
         w: startRotation.w,
       },
+      true,
     );
   }, [startPosition, startRotation]);
 
@@ -282,12 +285,13 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       ccd
     >
       <RoundCuboidCollider
-        args={[1.4, 0.7, 3, 0.2]}
-        position={[0, 0.9, 0]}
+        args={[1.4, 0.7, 5, 0.2]}
+        position={[0, 0.9, 1]}
         restitution={0}
       />
+
       <RoundCuboidCollider
-        args={[1.4, 2.7, 3, 0.2]}
+        args={[1.4, 2.7, 5, 0.2]}
         position={[0, 2.9, 0]}
         restitution={0}
       />

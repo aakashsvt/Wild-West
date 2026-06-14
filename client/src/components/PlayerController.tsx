@@ -472,13 +472,18 @@ export function PlayerController({ playerRef }: Props) {
       <CuboidCollider args={[0.5, 0.5, 2]} position={[-0.5, 0.5, 0]} /> */}
       {/* <CuboidCollider args={[0.5, 1, 2]} position={[0, 1.7, 0]} /> */}
       <RoundCuboidCollider
-        args={[1.4, 0.7, 3, 0.2]}
-        position={[0, 0.9, 0]}
+        args={[1.4, 0.7, 5, 0.2]}
+        position={[0, 0.9, 1]}
         restitution={0}
       />
       <RoundCuboidCollider
-        args={[1.4, 2.7, 3, 0.2]}
-        position={[0, 2.9, 0]}
+        args={[1.4, 1.7, 2, 0.2]}
+        position={[0, 7, 0]}
+        restitution={0}
+      />
+      <RoundCuboidCollider
+        args={[1.4, 2.7, 5, 0.2]}
+        position={[0, 2.9, 1]}
         restitution={0}
         onCollisionEnter={({ other }) => {
           if (!other.rigidBody) return;
