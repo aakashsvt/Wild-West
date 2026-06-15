@@ -23,7 +23,7 @@ import { isRemoteKicking } from "@/lib/remoke-kicks";
 
 const PLAYER_START_POSITION: [number, number, number] = [422.5, 7, -25.1];
 
-const MAX_SPEED = 90;
+const MAX_SPEED = 150;
 const ACCELERATION = 50;
 const TURN_SPEED = 2;
 const BRAKE_FORCE = 5;
@@ -89,6 +89,8 @@ export function PlayerController({ playerRef }: Props) {
 
   // Store distance traveled for scoring
   const lastPosition = useRef(new Vector3());
+  const proximityContacts = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     playerRef.current = body.current;
   }, [playerRef]);
@@ -141,7 +143,22 @@ export function PlayerController({ playerRef }: Props) {
     const currentSpeed = Math.sqrt(linvel.x ** 2 + linvel.z ** 2);
 
     // =========================
-    // 🔁 TURNING (SMOOTH)
+    // �️ PROXIMITY REPULSION
+    // =========================
+    if (proximityContacts.current.size > 0) {
+      // Keep local repulsion minimal; remote pause is the main collision fix.
+      const repulsionDir = new Vector3(0, 0, 0);
+      proximityContacts.current.forEach(() => {
+        repulsionDir.z += 1;
+      });
+      if (repulsionDir.length() > 0) {
+        repulsionDir.normalize();
+        velocity.addScaledVector(repulsionDir, 0.2);
+      }
+    }
+
+    // =========================
+    // �🔁 TURNING (SMOOTH)
     // =========================
 
     if (left || right) {
@@ -450,7 +467,7 @@ export function PlayerController({ playerRef }: Props) {
       // position={[500, 6.5787, 0]}
       rotation={[0, PLAYER_START_ROTATION_Y, 0]}
       colliders={false}
-      mass={100}
+      mass={10000}
       friction={0.5}
       restitution={0}
       linearDamping={1}
@@ -470,28 +487,37 @@ export function PlayerController({ playerRef }: Props) {
         args={[1.4, 0.7, 5, 0.2]}
         position={[0, 0.9, 1]}
         restitution={0}
+
       />
       <RoundCuboidCollider
         args={[1.4, 1.7, 2, 0.2]}
         position={[0, 7, 0]}
         restitution={0}
+        mass={10000}
       />
       <RoundCuboidCollider
         args={[1.4, 2.7, 5, 0.2]}
         position={[0, 2.9, 1]}
         restitution={0}
-      // onCollisionEnter={({ other }) => {
-      //   if (!other.rigidBody) return;
-      //   if (!isRemoteKicking(other.rigidBody)) return;
-      //   const now = performance.now();
-      //   if (now - lastKickedAt.current < 500) return;
-
-      //   lastKickedAt.current = now;
-      //   const rb = body.current;
-      //   if (!rb) return; const lv = rb.linvel();
-      //   rb.setLinvel({ x: lv.x * 0.5, y: lv.y, z: lv.z * 0.5 }, true);
-      // }}
+        mass={10000}
       />
+      <RoundCuboidCollider
+        args={[1.6, 2.7, 5, 0.2]}
+        position={[0, 2.9, 1]}
+
+        sensor
+        onCollisionEnter={({ other }) => {
+          if (!other.rigidBody) return;
+          const otherId = other.rigidBody.handle;
+          proximityContacts.current.add(otherId.toString());
+        }}
+        onCollisionExit={({ other }) => {
+          if (!other.rigidBody) return;
+          const otherId = other.rigidBody.handle;
+          proximityContacts.current.delete(otherId.toString());
+        }}
+      />
+
       {/* <CapsuleCollider args={[1, 0.5]} position={[0, 0.7, -2]} rotation={[0, 0, Math.PI / 2]} />
       <CapsuleCollider args={[1, 0.5]} position={[0, 0.7, 3]} rotation={[0, 0, Math.PI / 2]} /> */}
       {/* <Model ref={horseRef} />

@@ -69,6 +69,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
   const velocity = useRef(new Vector3());
   const currentRotation = useRef(startRotation.clone());
   const targetRotation = useRef(startRotation.clone());
+  const proximityContacts = useRef<Set<number>>(new Set());
 
   const playAnimation = useCallback((name: string) => {
     if (lastAnimation.current === name) return;
@@ -263,9 +264,19 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       currentRotation.current.slerp(targetRotation.current, 0.25);
     }
 
-    // Move remotes as kinematic bodies so Rapier can solve contacts against
-    // the local dynamic horse instead of treating updates as teleports.
-    const bodyY = bodyRef.current.translation().y;
+    const isNearOther = proximityContacts.current.size > 0;
+    if (isNearOther) {
+      const currentVel = bodyRef.current.linvel();
+      bodyRef.current.setLinvel(
+        {
+          x: 0,
+          y: currentVel.y,
+          z: 0,
+        },
+        true,
+      );
+      return;
+    }
 
 
 
@@ -273,7 +284,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
     bodyRef.current.setTranslation(
       {
         x: currentPosition.current.x,
-        y: bodyY,
+        y: bodyRef.current.translation().y,
         z: currentPosition.current.z,
       },
       true,
@@ -298,7 +309,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
         position={[startPosition.x, startPosition.y, startPosition.z]}
         rotation={[0, PLAYER_START_ROTATION_Y, 0]}
         colliders={false}
-        mass={100}
+        mass={10000}
         friction={0.5}
         restitution={0}
         linearDamping={1}
@@ -313,17 +324,34 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
           args={[1.4, 0.7, 5, 0.2]}
           position={[0, 0.9, 1]}
           restitution={0}
+          mass={10000}
         />
         <RoundCuboidCollider
           args={[1.4, 1.7, 2, 0.2]}
           position={[0, 7, 0]}
           restitution={0}
+          mass={10000}
         />
         <RoundCuboidCollider
           args={[1.4, 2.7, 5, 0.2]}
           position={[0, 2.9, 1]}
           restitution={0}
+          mass={10000}
         />
+        <RoundCuboidCollider
+          args={[1.6, 2.7, 5, 0.2]}
+          position={[0, 2.9, 1]}
+          sensor
+          onCollisionEnter={({ other }) => {
+            if (!other.rigidBody) return;
+            proximityContacts.current.add(other.rigidBody.handle);
+          }}
+          onCollisionExit={({ other }) => {
+            if (!other.rigidBody) return;
+            proximityContacts.current.delete(other.rigidBody.handle);
+          }}
+        />
+
         <group>
           {/* <Model1 ref={horseRef} /> */}
           <Model11 ref={horseRef} />
