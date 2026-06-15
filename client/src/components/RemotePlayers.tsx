@@ -21,7 +21,7 @@ const PLAYER_COLORS = ["#d4a853", "#c0392b", "#2980b9", "#5a8a4a"];
 const PLAYER_START_POSITION: Vec3Tuple = [422.5, 7, -25.1];
 const PLAYER_START_ROTATION_Y = 2.5;
 const START_LANE_SPACING = 5;
-const MAX_EXTRAPOLATION_SECONDS = 0.1;
+const MAX_EXTRAPOLATION_SECONDS = 0.12;
 
 type RemoteRiderProps = {
   player: PlayerInfo;
@@ -44,7 +44,6 @@ function getLaneStartPosition(playerIndex: number, playerCount: number) {
 function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
   const bodyRef = useRef<RapierRigidBody>(null);
   const horseRef = useRef<any>(null);
-  const collisionBody = useRef<RapierRigidBody>(null);
   const currentAction = useRef<any>(null);
   const lastAnimation = useRef<string | null>(null);
   const currentOverlayAction = useRef<any>(null);
@@ -245,7 +244,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
   }, [startPosition, startRotation]);
 
   useFrame(() => {
-    if (!bodyRef.current || !hasSnapshot.current || !collisionBody.current) return;
+    if (!bodyRef.current || !hasSnapshot.current) return;
 
     const now = performance.now();
     const ageMs = now - lastReceivedAt.current;
@@ -268,18 +267,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
     // the local dynamic horse instead of treating updates as teleports.
     const bodyY = bodyRef.current.translation().y;
 
-    // collisionBody.current.setNextKinematicTranslation({
-    //   x: currentPosition.current.x,
-    //   y: currentPosition.current.y,
-    //   z: currentPosition.current.z,
-    // });
 
-    // collisionBody.current.setNextKinematicRotation({
-    //   x: currentRotation.current.x,
-    //   y: currentRotation.current.y,
-    //   z: currentRotation.current.z,
-    //   w: currentRotation.current.w,
-    // });
 
 
     bodyRef.current.setTranslation(
@@ -304,39 +292,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
 
   return (
     <>
-      {/* <RigidBody
-        ref={collisionBody}
-        type="kinematicPosition"
-        position={[startPosition.x, startPosition.y, startPosition.z]}
-        rotation={[0, PLAYER_START_ROTATION_Y, 0]}
-        colliders={false}
-        mass={100}
-        friction={0.5}
-        restitution={0}
-        linearDamping={1}
-        angularDamping={8}
-        canSleep={false}
-        dominanceGroup={10}
-        enabledRotations={[false, false, false]}
-        ccd>
-        <RoundCuboidCollider
-          args={[1.4, 0.7, 5, 0.2]}
-          position={[0, 0.9, 1]}
-          restitution={0}
 
-        />
-        <RoundCuboidCollider
-          args={[1.4, 1.7, 2, 0.2]}
-          position={[0, 7, 0]}
-          restitution={0}
-
-        />
-        <RoundCuboidCollider
-          args={[1.4, 2.7, 5, 0.2]}
-          position={[0, 2.9, 1]}
-          restitution={0}
-        />
-      </RigidBody> */}
       <RigidBody
         ref={bodyRef}
         position={[startPosition.x, startPosition.y, startPosition.z]}
