@@ -18,9 +18,9 @@ import { Model1 } from "./CowboyXHorse_GLB_v08";
 import { Model11 } from "./CowboyXHorse_NLA_V11";
 import { registerRemoteBody, setRemoteKicking, unregisterRemoteBody } from "@/lib/remoke-kicks";
 const PLAYER_COLORS = ["#d4a853", "#c0392b", "#2980b9", "#5a8a4a"];
-const PLAYER_START_POSITION: Vec3Tuple = [422.5, 7, -25.1];
+const PLAYER_START_POSITION: Vec3Tuple = [422.5, 16, -25.1];
 const PLAYER_START_ROTATION_Y = 2.5;
-const START_LANE_SPACING = 5;
+const START_LANE_SPACING = 15;
 const MAX_EXTRAPOLATION_SECONDS = 0.12;
 
 type RemoteRiderProps = {
@@ -264,27 +264,27 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       currentRotation.current.slerp(targetRotation.current, 0.25);
     }
 
-    const isNearOther = proximityContacts.current.size > 0;
-    if (isNearOther) {
-      const currentVel = bodyRef.current.linvel();
-      bodyRef.current.setLinvel(
-        {
-          x: 0,
-          y: currentVel.y,
-          z: 0,
-        },
-        true,
-      );
-      return;
-    }
+    // const isNearOther = proximityContacts.current.size > 0;
+    // if (isNearOther) {
+    //   const currentVel = bodyRef.current.linvel();
+    //   bodyRef.current.setLinvel(
+    //     {
+    //       x: 0,
+    //       y: currentVel.y,
+    //       z: 0,
+    //     },
+    //     true,
+    //   );
+    //   return;
+    // }
 
 
 
-
+    const bodyY = bodyRef.current.translation().y
     bodyRef.current.setTranslation(
       {
         x: currentPosition.current.x,
-        y: bodyRef.current.translation().y,
+        y: bodyY,
         z: currentPosition.current.z,
       },
       true,
@@ -309,7 +309,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
         position={[startPosition.x, startPosition.y, startPosition.z]}
         rotation={[0, PLAYER_START_ROTATION_Y, 0]}
         colliders={false}
-        mass={10000}
+        mass={10}
         friction={0.5}
         restitution={0}
         linearDamping={1}
@@ -324,21 +324,21 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
           args={[1.4, 0.7, 5, 0.2]}
           position={[0, 0.9, 1]}
           restitution={0}
-          mass={10000}
+
         />
         <RoundCuboidCollider
           args={[1.4, 1.7, 2, 0.2]}
           position={[0, 7, 0]}
           restitution={0}
-          mass={10000}
+
         />
         <RoundCuboidCollider
           args={[1.4, 2.7, 5, 0.2]}
           position={[0, 2.9, 1]}
           restitution={0}
-          mass={10000}
+
         />
-        <RoundCuboidCollider
+        {/* <RoundCuboidCollider
           args={[1.6, 2.7, 5, 0.2]}
           position={[0, 2.9, 1]}
           sensor
@@ -350,7 +350,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
             if (!other.rigidBody) return;
             proximityContacts.current.delete(other.rigidBody.handle);
           }}
-        />
+        /> */}
 
         <group>
           {/* <Model1 ref={horseRef} /> */}
