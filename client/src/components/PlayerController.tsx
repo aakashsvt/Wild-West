@@ -21,7 +21,7 @@ import { Model11 } from "./CowboyXHorse_NLA_V11";
 import { isRemoteKicking } from "@/lib/remoke-kicks";
 // const PLAYER_START_POSITION: [number, number, number] = [-340, 5.5787, 410];
 
-const PLAYER_START_POSITION: [number, number, number] = [422.5, 5, -25.1];
+const PLAYER_START_POSITION: [number, number, number] = [422.5, 7, -25.1];
 
 const MAX_SPEED = 90;
 const ACCELERATION = 50;
@@ -480,17 +480,17 @@ export function PlayerController({ playerRef }: Props) {
         args={[1.4, 2.7, 5, 0.2]}
         position={[0, 2.9, 1]}
         restitution={0}
-        onCollisionEnter={({ other }) => {
-          if (!other.rigidBody) return;
-          if (!isRemoteKicking(other.rigidBody)) return;
-          const now = performance.now();
-          if (now - lastKickedAt.current < 500) return;
+      // onCollisionEnter={({ other }) => {
+      //   if (!other.rigidBody) return;
+      //   if (!isRemoteKicking(other.rigidBody)) return;
+      //   const now = performance.now();
+      //   if (now - lastKickedAt.current < 500) return;
 
-          lastKickedAt.current = now;
-          const rb = body.current;
-          if (!rb) return; const lv = rb.linvel();
-          rb.setLinvel({ x: lv.x * 0.5, y: lv.y, z: lv.z * 0.5 }, true);
-        }}
+      //   lastKickedAt.current = now;
+      //   const rb = body.current;
+      //   if (!rb) return; const lv = rb.linvel();
+      //   rb.setLinvel({ x: lv.x * 0.5, y: lv.y, z: lv.z * 0.5 }, true);
+      // }}
       />
       {/* <CapsuleCollider args={[1, 0.5]} position={[0, 0.7, -2]} rotation={[0, 0, Math.PI / 2]} />
       <CapsuleCollider args={[1, 0.5]} position={[0, 0.7, 3]} rotation={[0, 0, Math.PI / 2]} /> */}

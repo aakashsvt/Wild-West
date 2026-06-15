@@ -18,7 +18,7 @@ import { Model1 } from "./CowboyXHorse_GLB_v08";
 import { Model11 } from "./CowboyXHorse_NLA_V11";
 import { registerRemoteBody, setRemoteKicking, unregisterRemoteBody } from "@/lib/remoke-kicks";
 const PLAYER_COLORS = ["#d4a853", "#c0392b", "#2980b9", "#5a8a4a"];
-const PLAYER_START_POSITION: Vec3Tuple = [422.5, 5, -25.1];
+const PLAYER_START_POSITION: Vec3Tuple = [422.5, 7, -25.1];
 const PLAYER_START_ROTATION_Y = 2.5;
 const START_LANE_SPACING = 5;
 const MAX_EXTRAPOLATION_SECONDS = 0.1;
@@ -230,18 +230,18 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       true,
     );
 
-    collisionBody.current?.setNextKinematicTranslation({
-      x: startPosition.x,
-      y: startPosition.y,
-      z: startPosition.z,
-    });
+    // collisionBody.current?.setNextKinematicTranslation({
+    //   x: startPosition.x,
+    //   y: startPosition.y,
+    //   z: startPosition.z,
+    // });
 
-    collisionBody.current?.setNextKinematicRotation({
-      x: startRotation.x,
-      y: startRotation.y,
-      z: startRotation.z,
-      w: startRotation.w,
-    });
+    // collisionBody.current?.setNextKinematicRotation({
+    //   x: startRotation.x,
+    //   y: startRotation.y,
+    //   z: startRotation.z,
+    //   w: startRotation.w,
+    // });
   }, [startPosition, startRotation]);
 
   useFrame(() => {
@@ -268,18 +268,18 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
     // the local dynamic horse instead of treating updates as teleports.
     const bodyY = bodyRef.current.translation().y;
 
-    collisionBody.current.setNextKinematicTranslation({
-      x: currentPosition.current.x,
-      y: currentPosition.current.y,
-      z: currentPosition.current.z,
-    });
+    // collisionBody.current.setNextKinematicTranslation({
+    //   x: currentPosition.current.x,
+    //   y: currentPosition.current.y,
+    //   z: currentPosition.current.z,
+    // });
 
-    collisionBody.current.setNextKinematicRotation({
-      x: currentRotation.current.x,
-      y: currentRotation.current.y,
-      z: currentRotation.current.z,
-      w: currentRotation.current.w,
-    });
+    // collisionBody.current.setNextKinematicRotation({
+    //   x: currentRotation.current.x,
+    //   y: currentRotation.current.y,
+    //   z: currentRotation.current.z,
+    //   w: currentRotation.current.w,
+    // });
 
 
     bodyRef.current.setTranslation(
@@ -304,58 +304,11 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
 
   return (
     <>
-      <RigidBody
-        ref={bodyRef}
-        position={[startPosition.x, startPosition.y, startPosition.z]}
-        rotation={[0, PLAYER_START_ROTATION_Y, 0]}
-        colliders={false}
-        mass={0}
-        canSleep={false}
-        enabledRotations={[false, false, false]}
-
-      >
-        {/* <RoundCuboidCollider
-          args={[1.4, 0.7, 5, 0.2]}
-          position={[0, 0.9, 1]}
-          restitution={0}
-        />
-        <RoundCuboidCollider
-          args={[1.4, 1.7, 2, 0.2]}
-          position={[0, 7, 0]}
-          restitution={0}
-        />
-        <RoundCuboidCollider
-          args={[1.4, 2.7, 5, 0.2]}
-          position={[0, 2.9, 1]}
-          restitution={0}
-        /> */}
-        <group>
-          {/* <Model1 ref={horseRef} /> */}
-          <Model11 ref={horseRef} />
-          <Html position={[0, 5.2, 0]} center distanceFactor={35} style={{ pointerEvents: "none" }}>
-            <div
-              style={{
-                background: "rgba(19, 10, 4, 0.82)",
-                border: `1px solid ${color}80`,
-                borderRadius: 4,
-                boxShadow: "0 4px 18px rgba(0,0,0,0.5)",
-                color,
-                fontFamily: "serif",
-                fontSize: 12,
-                letterSpacing: "0.08em",
-                padding: "4px 8px",
-                textShadow: "1px 1px 0 #0a0603",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {player.username}
-            </div>
-          </Html>
-        </group>
-      </RigidBody>
-      <RigidBody
+      {/* <RigidBody
         ref={collisionBody}
         type="kinematicPosition"
+        position={[startPosition.x, startPosition.y, startPosition.z]}
+        rotation={[0, PLAYER_START_ROTATION_Y, 0]}
         colliders={false}
         mass={100}
         friction={0.5}
@@ -383,7 +336,63 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
           position={[0, 2.9, 1]}
           restitution={0}
         />
+      </RigidBody> */}
+      <RigidBody
+        ref={bodyRef}
+        position={[startPosition.x, startPosition.y, startPosition.z]}
+        rotation={[0, PLAYER_START_ROTATION_Y, 0]}
+        colliders={false}
+        mass={100}
+        friction={0.5}
+        restitution={0}
+        linearDamping={1}
+        angularDamping={8}
+        canSleep={false}
+        dominanceGroup={10}
+        enabledRotations={[false, false, false]}
+        ccd
+
+      >
+        <RoundCuboidCollider
+          args={[1.4, 0.7, 5, 0.2]}
+          position={[0, 0.9, 1]}
+          restitution={0}
+        />
+        <RoundCuboidCollider
+          args={[1.4, 1.7, 2, 0.2]}
+          position={[0, 7, 0]}
+          restitution={0}
+        />
+        <RoundCuboidCollider
+          args={[1.4, 2.7, 5, 0.2]}
+          position={[0, 2.9, 1]}
+          restitution={0}
+        />
+        <group>
+          {/* <Model1 ref={horseRef} /> */}
+          <Model11 ref={horseRef} />
+          <Html position={[0, 5.2, 0]} center distanceFactor={35} style={{ pointerEvents: "none" }}>
+            <div
+              style={{
+                background: "rgba(19, 10, 4, 0.82)",
+                border: `1px solid ${color}80`,
+                borderRadius: 4,
+                boxShadow: "0 4px 18px rgba(0,0,0,0.5)",
+                color,
+                fontFamily: "serif",
+                fontSize: 12,
+                letterSpacing: "0.08em",
+                padding: "4px 8px",
+                textShadow: "1px 1px 0 #0a0603",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {player.username}
+            </div>
+          </Html>
+        </group>
       </RigidBody>
+
 
     </>
 

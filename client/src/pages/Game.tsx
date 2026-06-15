@@ -383,7 +383,7 @@ export default function Game() {
         }}>
           <Suspense fallback={null}>
             <Environment files="/models/Cannon_Exterior.hdr" background={true} blur={0} />
-            <Physics gravity={[0, -9.81, 0]} debug={false}>
+            <Physics gravity={[0, -10, 0]} debug={false}>
               <PlayerController playerRef={playerRef} />
               <RemotePlayers />
               <Model />
