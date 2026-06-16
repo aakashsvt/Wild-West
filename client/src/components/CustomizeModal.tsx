@@ -130,7 +130,7 @@ export function CustomizeModal({ open, onOpenChange }: CustomizeModalProps) {
       >
         {/* ── Header ─────────────────────────────────────────────────── */}
         <div
-          className="flex items-center gap-3 px-5 py-4"
+          className="flex items-center gap-3 px-5 py-4 pr-12"
           style={{ borderBottom: `1px solid ${W.borderDim}` }}
         >
           <AnimatePresence>

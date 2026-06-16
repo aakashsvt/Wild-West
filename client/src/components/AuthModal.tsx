@@ -262,7 +262,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = "signin" }: AuthMod
       >
         {/* Header ornament */}
         <div
-          className="px-6 pt-6 pb-4"
+          className="px-6 pt-6 pb-4 pr-12"
           style={{ borderBottom: `1px solid ${W.borderDim}` }}
         >
           <div className="flex items-center gap-2 justify-center mb-3">

@@ -194,6 +194,23 @@ export function attachSocketIO(httpServer: HttpServer) {
       }
     });
 
+    socket.on('lobby:unready', () => {
+      if (!currentRoomId) return;
+      const room = rooms.get(currentRoomId);
+      if (!room || room.status === 'starting') return;
+
+      const player = room.players.get(socket.id);
+      if (!player || !player.isReady) return;
+
+      if (room.status === 'countdown') {
+        cancelCountdown(room); // resets all players to not-ready and clears the timer
+      } else {
+        player.isReady = false;
+      }
+
+      io.to(room.roomId).emit('lobby:state', serializeRoom(room));
+    });
+
     socket.on('race:update', ({ score, timeTaken }) => {
       if (!currentRoomId) return;
       const room = rooms.get(currentRoomId);

@@ -14,6 +14,7 @@ import Game from "@/pages/Game";
 import Lobby from "@/pages/Lobby";
 import Salon from "@/pages/Salon";
 import { useAuthStore } from "@/store/auth-store";
+import { getToken } from "@/lib/api";
 
 function Router() {
   return (
@@ -30,10 +31,29 @@ function Router() {
 function App() {
   const [assetsLoaded, setAssetsLoaded] = useState(false);
   const hydrateToken = useAuthStore((s) => s.hydrateToken);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
 
   useEffect(() => {
     hydrateToken();
   }, []);
+
+  useEffect(() => {
+    const handleUnauthorized = () => clearAuth();
+    // fires when localStorage changes in another tab
+    const handleStorage = () => { if (!getToken()) clearAuth(); };
+    // catches same-tab token deletion when the user comes back to the tab
+    const handleVisibility = () => { if (!document.hidden && !getToken()) clearAuth(); };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    window.addEventListener("storage", handleStorage);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+      window.removeEventListener("storage", handleStorage);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [clearAuth]);
 
   return (
     <QueryClientProvider client={queryClient}>

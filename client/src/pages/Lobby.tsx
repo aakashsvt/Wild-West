@@ -123,6 +123,7 @@ export default function Lobby() {
   };
 
   const handleReady = () => getSocket().emit("lobby:ready");
+  const handleUnready = () => getSocket().emit("lobby:unready");
 
   const handleBack = () => {
     getSocket().emit("lobby:leave");
@@ -423,6 +424,30 @@ export default function Lobby() {
                   ) : (
                     "Ready Up"
                   )}
+                </button>
+              )}
+
+              {/* Unready button — only visible when already ready */}
+              {status === "waiting" && isReady && (
+                <button
+                  onClick={handleUnready}
+                  className="w-full rounded py-2 font-western text-sm tracking-wider transition-all"
+                  style={{
+                    background: "transparent",
+                    border: `1px solid ${W.borderWarm}50`,
+                    color: W.creamMuted,
+                    letterSpacing: "0.12em",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = W.rust;
+                    e.currentTarget.style.color = W.cream;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = `${W.borderWarm}50`;
+                    e.currentTarget.style.color = W.creamMuted;
+                  }}
+                >
+                  Cancel Ready
                 </button>
               )}
             </motion.div>

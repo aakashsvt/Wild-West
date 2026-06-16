@@ -58,6 +58,10 @@ async function request<T>(
 
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
+    if (res.status === 401) {
+      clearToken();
+      window.dispatchEvent(new Event("auth:unauthorized"));
+    }
     throw new ApiError(res.status, text);
   }
 

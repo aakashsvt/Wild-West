@@ -33,6 +33,7 @@ export interface RaceResultEntry {
 export interface ClientToServerEvents {
   'lobby:join':    (payload: { username: string }) => void;
   'lobby:ready':   () => void;
+  'lobby:unready': () => void;
   'lobby:leave':   () => void;
   'race:update':   (payload: { score: number; timeTaken: number }) => void;
   'race:finish':   (payload: { score: number; timeTaken: number }) => void;

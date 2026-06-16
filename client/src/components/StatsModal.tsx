@@ -84,7 +84,7 @@ export function StatsModal({ open, onOpenChange, user, stats }: StatsModalProps)
       >
         {/* ── Header ── */}
         <div
-          className="px-5 pt-5 pb-4"
+          className="px-5 pt-5 pb-4 pr-12"
           style={{ borderBottom: `1px solid ${W.borderDim}` }}
         >
           {/* Level badge + name */}
