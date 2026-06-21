@@ -1,7 +1,7 @@
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody, RoundCuboidCollider, type RapierRigidBody } from "@react-three/rapier";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   Euler,
   type KeyframeTrack,
@@ -13,14 +13,15 @@ import {
 import { useLobbyStore } from "@/hooks/use-lobby-store";
 import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import type { PlayerInfo, RacePlayerState, Vec3Tuple } from "@shared/types/multiplayer";
+import { isRemoteStunned } from "@/lib/remoke-kicks";
 import { Model } from "./CowboyXHorse_GLB_v01";
 import { Model1 } from "./CowboyXHorse_GLB_v08";
 import { Model11 } from "./CowboyXHorse_NLA_V11";
+import { registerRemoteBody, setRemoteKicking, unregisterRemoteBody } from "@/lib/remoke-kicks";
 const PLAYER_COLORS = ["#d4a853", "#c0392b", "#2980b9", "#5a8a4a"];
-const PLAYER_START_POSITION: Vec3Tuple = [422.5, 7, -25.1];
+const PLAYER_START_POSITION: Vec3Tuple = [422.5, 150, -25.1];
 const PLAYER_START_ROTATION_Y = 2.5;
-const START_LANE_SPACING = 5;
-const STALE_PLAYER_MS = 5000;
+const START_LANE_SPACING = 10;
 const MAX_EXTRAPOLATION_SECONDS = 0.12;
 
 type RemoteRiderProps = {
@@ -53,8 +54,6 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
   const lastSentAt = useRef(0);
   const lastReceivedAt = useRef(0);
   const hasSnapshot = useRef(false);
-  const isVisibleRef = useRef(false);
-  const [isVisible, setIsVisible] = useState(false);
 
   const startPosition = useMemo(
     () => getLaneStartPosition(playerIndex, playerCount),
@@ -71,6 +70,8 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
   const velocity = useRef(new Vector3());
   const currentRotation = useRef(startRotation.clone());
   const targetRotation = useRef(startRotation.clone());
+  const proximityContacts = useRef<Set<number>>(new Set());
+  const stunnedUntil = useRef<number>(0);
 
   const playAnimation = useCallback((name: string) => {
     if (lastAnimation.current === name) return;
@@ -148,7 +149,11 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       lastSentAt.current = state.sentAt;
       lastReceivedAt.current = performance.now();
       hasSnapshot.current = true;
-
+      console.log({
+        networkY: state.position[1],
+        currentY: currentPosition.current.y,
+        bodyY: bodyRef.current?.translation().y,
+      });
       basePosition.current.set(
         state.position[0],
         state.position[1],
@@ -182,9 +187,8 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
         lastOverlay.current = null;
       }
 
-      if (!isVisibleRef.current) {
-        isVisibleRef.current = true;
-        setIsVisible(true);
+      if (bodyRef.current) {
+        setRemoteKicking(bodyRef.current, !!incomingOverlay);
       }
     },
     [player.socketId, playAnimation, playOverlay],
@@ -193,11 +197,22 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
   useSocketEvent("race:player-state", onPlayerState);
 
   useEffect(() => {
+    const rb = bodyRef.current;
+    if (!rb) return;
+    registerRemoteBody(rb, player.socketId);
+    return () => {
+      unregisterRemoteBody(rb);
+    }
+
+  }, [player.socketId]);
+
+  useEffect(() => {
     currentPosition.current.copy(startPosition);
     basePosition.current.copy(startPosition);
     targetPosition.current.copy(startPosition);
     currentRotation.current.copy(startRotation);
     targetRotation.current.copy(startRotation);
+
 
     bodyRef.current?.setTranslation(
       {
@@ -216,21 +231,41 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       },
       true,
     );
+
+    // collisionBody.current?.setNextKinematicTranslation({
+    //   x: startPosition.x,
+    //   y: startPosition.y,
+    //   z: startPosition.z,
+    // });
+
+    // collisionBody.current?.setNextKinematicRotation({
+    //   x: startRotation.x,
+    //   y: startRotation.y,
+    //   z: startRotation.z,
+    //   w: startRotation.w,
+    // });
   }, [startPosition, startRotation]);
 
   useFrame(() => {
     if (!bodyRef.current || !hasSnapshot.current) return;
 
     const now = performance.now();
-    const ageMs = now - lastReceivedAt.current;
-    if (ageMs > STALE_PLAYER_MS) {
-      if (isVisibleRef.current) {
-        isVisibleRef.current = false;
-        setIsVisible(false);
-      }
+    // Client-side stunt: consult remoke-kicks map for stun state
+    if (isRemoteStunned(bodyRef.current)) {
+      const bodyY = bodyRef.current.translation().y;
+      bodyRef.current.setLinvel({ x: 0, y: bodyRef.current.linvel().y, z: 0 }, true);
+      bodyRef.current.setTranslation(
+        {
+          x: currentPosition.current.x,
+          y: bodyY,
+          z: currentPosition.current.z,
+        },
+        true,
+      );
+      console.log(`aaaaaa[stun] ${player.socketId} is stunned, skipping extrapolation`);
       return;
     }
-
+    const ageMs = now - lastReceivedAt.current;
     const extrapolationSeconds = Math.min(ageMs / 1000, MAX_EXTRAPOLATION_SECONDS);
     targetPosition.current.copy(basePosition.current).addScaledVector(
       velocity.current,
@@ -246,11 +281,23 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
       currentRotation.current.slerp(targetRotation.current, 0.25);
     }
 
-    // X/Z come straight from the websocket snapshot (no velocity gain, no
-    // overshoot — eliminates the random position shift). Y is read back off
-    // the body itself and re-applied unchanged, so gravity + the track
-    // collider are the only things that ever decide vertical position.
-    const bodyY = bodyRef.current.translation().y;
+    // const isNearOther = proximityContacts.current.size > 0;
+    // if (isNearOther) {
+    //   const currentVel = bodyRef.current.linvel();
+    //   bodyRef.current.setLinvel(
+    //     {
+    //       x: 0,
+    //       y: currentVel.y,
+    //       z: 0,
+    //     },
+    //     true,
+    //   );
+    //   return;
+    // }
+
+
+
+    const bodyY = bodyRef.current.translation().y
     bodyRef.current.setTranslation(
       {
         x: currentPosition.current.x,
@@ -265,38 +312,64 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
         y: currentRotation.current.y,
         z: currentRotation.current.z,
         w: currentRotation.current.w,
-      },
-      true,
+      }, true,
     );
   });
 
   const color = PLAYER_COLORS[player.colorIndex] ?? "#e8d5b0";
 
   return (
-    <RigidBody
-      ref={bodyRef}
-      position={[startPosition.x, startPosition.y, startPosition.z]}
-      rotation={[0, PLAYER_START_ROTATION_Y, 0]}
-      colliders={false}
-      mass={0.1}
-      friction={0.5}
-      restitution={0}
-      linearDamping={1}
-      angularDamping={8}
-      canSleep={false}
-      dominanceGroup={10}
-      enabledRotations={[false, false, false]}
-      ccd
-    >
-      {/* Collider lives outside the isVisible gate so the body always has a
-          shape to collide with the track — otherwise the dynamic body would
-          fall through the world before the first snapshot arrives. */}
-      <RoundCuboidCollider
-        args={[1.4, 0.7, 3, 0.2]}
-        position={[0, 0.9, 0]}
+    <>
+
+      <RigidBody
+        ref={bodyRef}
+        position={[startPosition.x, startPosition.y, startPosition.z]}
+        rotation={[0, PLAYER_START_ROTATION_Y, 0]}
+        colliders={false}
+        mass={10}
+        friction={0.5}
         restitution={0}
-      />
-      {isVisible && (
+        linearDamping={1}
+        angularDamping={8}
+        canSleep={false}
+        dominanceGroup={10}
+        enabledRotations={[false, false, false]}
+        ccd
+
+      >
+        {/* <RoundCuboidCollider
+          args={[1.4, 0.7, 5, 0.2]}
+          position={[0, 0.9, 1]}
+          restitution={0}
+
+        /> */}
+        <RoundCuboidCollider
+          args={[1.4, 1.7, 2, 0.2]}
+          position={[0, 7, 0]}
+          restitution={0}
+
+
+        />
+        <RoundCuboidCollider
+          args={[1.4, 2.7, 5, 0.2]}
+          position={[0, 2.9, 1]}
+          restitution={0}
+
+        />
+        {/* <RoundCuboidCollider
+          args={[1.6, 2.7, 5, 0.2]}
+          position={[0, 2.9, 1]}
+          sensor
+          onCollisionEnter={({ other }) => {
+            if (!other.rigidBody) return;
+            proximityContacts.current.add(other.rigidBody.handle);
+          }}
+          onCollisionExit={({ other }) => {
+            if (!other.rigidBody) return;
+            proximityContacts.current.delete(other.rigidBody.handle);
+          }}
+        /> */}
+
         <group>
           {/* <Model1 ref={horseRef} /> */}
           <Model11 ref={horseRef} />
@@ -320,8 +393,11 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
             </div>
           </Html>
         </group>
-      )}
-    </RigidBody>
+      </RigidBody>
+
+
+    </>
+
   );
 }
 

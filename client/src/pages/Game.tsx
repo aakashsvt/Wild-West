@@ -311,7 +311,7 @@ export default function Game() {
   const speedRef = useRef(0)
 
   const { speed, score, timeElapsed, isPlaying, isGameOver } = useGameStore()
-  const { setStandings, setRaceResults } = useLobbyStore()
+  const { setLobbyState, setStandings, setRaceResults } = useLobbyStore()
 
   useEffect(() => {
     speedRef.current = speed
@@ -339,6 +339,7 @@ export default function Game() {
   }, [isGameOver, score, timeElapsed]);
 
   // Subscribe to server-authoritative standings
+  useSocketEvent('lobby:state', setLobbyState);
   useSocketEvent('race:standings', setStandings);
   useSocketEvent('race:results', setRaceResults);
   const keyboardMap = useMemo(() => [
@@ -382,7 +383,7 @@ export default function Game() {
         }}>
           <Suspense fallback={null}>
             <Environment files="/models/Cannon_Exterior.hdr" background={true} blur={0} />
-            <Physics gravity={[0, -9.81, 0]} debug={false}>
+            <Physics gravity={[0, -300, 0]} debug={false}>
               <PlayerController playerRef={playerRef} />
               <RemotePlayers />
               <Model />
