@@ -10,9 +10,6 @@ export function Horse(props: any) {
     const { animations } = horse
 
     const { actions } = useAnimations(animations, group)
-    console.log(
-        "Animations: ", actions
-    )
 
     useEffect(() => {
 

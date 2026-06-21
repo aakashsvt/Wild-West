@@ -1,7 +1,7 @@
-import { Server } from 'socket.io';
-import type { Server as HttpServer } from 'http';
-import { randomUUID } from 'crypto';
-import { storage } from './storage';
+import { Server } from "socket.io";
+import type { Server as HttpServer } from "http";
+import { randomUUID } from "crypto";
+import { storage } from "./storage";
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -10,7 +10,7 @@ import type {
   LobbyStatus,
   StandingEntry,
   RaceResultEntry,
-} from '../shared/types/multiplayer';
+} from "../shared/types/multiplayer";
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 4;
@@ -34,7 +34,7 @@ interface RoomState {
 const rooms = new Map<string, RoomState>();
 
 function generateRoomId(): string {
-  return randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase();
+  return randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
 }
 
 function serializeRoom(room: RoomState): LobbyRoom {
@@ -49,7 +49,7 @@ function serializeRoom(room: RoomState): LobbyRoom {
 
 function findAvailableRoom(): RoomState | null {
   for (const room of rooms.values()) {
-    if (room.status === 'waiting' && room.players.size < MAX_PLAYERS) {
+    if (room.status === "waiting" && room.players.size < MAX_PLAYERS) {
       return room;
     }
   }
@@ -61,7 +61,7 @@ function createRoom(): RoomState {
   const room: RoomState = {
     roomId,
     players: new Map(),
-    status: 'waiting',
+    status: "waiting",
     countdownTimer: null,
     raceId: null,
     standings: new Map(),
@@ -76,7 +76,7 @@ function cancelCountdown(room: RoomState) {
     clearInterval(room.countdownTimer);
     room.countdownTimer = null;
   }
-  room.status = 'waiting';
+  room.status = "waiting";
   for (const player of room.players.values()) {
     player.isReady = false;
   }
@@ -84,7 +84,7 @@ function cancelCountdown(room: RoomState) {
 
 function broadcastStandings(io: Server, room: RoomState) {
   const entries = Array.from(room.standings.values()).map((s) => s.entry);
-  io.to(room.roomId).emit('race:standings', entries);
+  io.to(room.roomId).emit("race:standings", entries);
 }
 
 function recomputePositions(room: RoomState) {
@@ -99,16 +99,19 @@ function recomputePositions(room: RoomState) {
 }
 
 export function attachSocketIO(httpServer: HttpServer) {
-  const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
-    cors: { origin: '*' },
-  });
+  const io = new Server<ClientToServerEvents, ServerToClientEvents>(
+    httpServer,
+    {
+      cors: { origin: "*" },
+    },
+  );
 
-  io.on('connection', (socket) => {
+  io.on("connection", (socket) => {
     let currentRoomId: string | null = null;
 
-    socket.on('lobby:join', ({ username }) => {
+    socket.on("lobby:join", ({ username }) => {
       if (!username || username.trim().length === 0) {
-        socket.emit('lobby:error', 'Username cannot be empty');
+        socket.emit("lobby:error", "Username cannot be empty");
         return;
       }
 
@@ -126,10 +129,10 @@ export function attachSocketIO(httpServer: HttpServer) {
       room.players.set(socket.id, player);
       currentRoomId = room.roomId;
       socket.join(room.roomId);
-      io.to(room.roomId).emit('lobby:state', serializeRoom(room));
+      io.to(room.roomId).emit("lobby:state", serializeRoom(room));
     });
 
-    socket.on('lobby:ready', () => {
+    socket.on("lobby:ready", () => {
       if (!currentRoomId) return;
       const room = rooms.get(currentRoomId);
       if (!room) return;
@@ -138,23 +141,29 @@ export function attachSocketIO(httpServer: HttpServer) {
       if (!player) return;
       player.isReady = true;
 
-      const readyCount = Array.from(room.players.values()).filter((p) => p.isReady).length;
+      const readyCount = Array.from(room.players.values()).filter(
+        (p) => p.isReady,
+      ).length;
       const totalCount = room.players.size;
-      io.to(room.roomId).emit('lobby:state', serializeRoom(room));
+      io.to(room.roomId).emit("lobby:state", serializeRoom(room));
 
-      if (readyCount >= MIN_PLAYERS && readyCount === totalCount && room.status === 'waiting') {
-        room.status = 'countdown';
+      if (
+        readyCount >= MIN_PLAYERS &&
+        readyCount === totalCount &&
+        room.status === "waiting"
+      ) {
+        room.status = "countdown";
         let remaining = COUNTDOWN_SECONDS;
-        io.to(room.roomId).emit('lobby:countdown', remaining);
+        io.to(room.roomId).emit("lobby:countdown", remaining);
 
         room.countdownTimer = setInterval(async () => {
           remaining -= 1;
           if (remaining > 0) {
-            io.to(room.roomId).emit('lobby:countdown', remaining);
+            io.to(room.roomId).emit("lobby:countdown", remaining);
           } else {
             clearInterval(room.countdownTimer!);
             room.countdownTimer = null;
-            room.status = 'starting';
+            room.status = "starting";
 
             // Initialize race on server
             room.raceId = room.roomId;
@@ -180,38 +189,41 @@ export function attachSocketIO(httpServer: HttpServer) {
             try {
               await storage.createRace(room.roomId, room.players.size);
             } catch (e) {
-              console.warn('[ws] Could not persist race to DB:', e);
+              console.warn("[ws] Could not persist race to DB:", e);
             }
 
-            io.to(room.roomId).emit('lobby:start', { raceId: room.roomId });
+            io.to(room.roomId).emit("lobby:start", { raceId: room.roomId });
             broadcastStandings(io, room);
 
-            setTimeout(() => {
-              rooms.delete(room.roomId);
-            }, 10 * 60 * 1000); // clean up after 10 min
+            setTimeout(
+              () => {
+                rooms.delete(room.roomId);
+              },
+              10 * 60 * 1000,
+            ); // clean up after 10 min
           }
         }, 1000);
       }
     });
 
-    socket.on('lobby:unready', () => {
+    socket.on("lobby:unready", () => {
       if (!currentRoomId) return;
       const room = rooms.get(currentRoomId);
-      if (!room || room.status === 'starting') return;
+      if (!room || room.status === "starting") return;
 
       const player = room.players.get(socket.id);
       if (!player || !player.isReady) return;
 
-      if (room.status === 'countdown') {
+      if (room.status === "countdown") {
         cancelCountdown(room); // resets all players to not-ready and clears the timer
       } else {
         player.isReady = false;
       }
 
-      io.to(room.roomId).emit('lobby:state', serializeRoom(room));
+      io.to(room.roomId).emit("lobby:state", serializeRoom(room));
     });
 
-    socket.on('race:update', ({ score, timeTaken }) => {
+    socket.on("race:update", ({ score, timeTaken }) => {
       if (!currentRoomId) return;
       const room = rooms.get(currentRoomId);
       if (!room || !room.standings.has(socket.id)) return;
@@ -225,7 +237,19 @@ export function attachSocketIO(httpServer: HttpServer) {
       broadcastStandings(io, room);
     });
 
-    socket.on('race:finish', async ({ score, timeTaken }) => {
+    socket.on("race:state", (state) => {
+      if (!currentRoomId) return;
+      const room = rooms.get(currentRoomId);
+      if (!room || !room.players.has(socket.id) || room.status !== "starting")
+        return;
+
+      socket.to(room.roomId).emit("race:player-state", {
+        socketId: socket.id,
+        ...state,
+      });
+    });
+
+    socket.on("race:finish", async ({ score, timeTaken }) => {
       if (!currentRoomId) return;
       const room = rooms.get(currentRoomId);
       if (!room || !room.standings.has(socket.id)) return;
@@ -253,7 +277,7 @@ export function attachSocketIO(httpServer: HttpServer) {
             position: room.finishedCount,
           });
         } catch (e) {
-          console.warn('[ws] Could not persist race result to DB:', e);
+          console.warn("[ws] Could not persist race result to DB:", e);
         }
       }
 
@@ -268,12 +292,16 @@ export function attachSocketIO(httpServer: HttpServer) {
           }))
           .sort((a, b) => a.position - b.position);
 
-        io.to(room.roomId).emit('race:results', results);
+        io.to(room.roomId).emit("race:results", results);
       }
     });
 
-    socket.on('lobby:leave', () => { handleLeave(); });
-    socket.on('disconnect', () => { handleLeave(); });
+    socket.on("lobby:leave", () => {
+      handleLeave();
+    });
+    socket.on("disconnect", () => {
+      handleLeave();
+    });
 
     function handleLeave() {
       if (!currentRoomId) return;
@@ -291,18 +319,20 @@ export function attachSocketIO(httpServer: HttpServer) {
         return;
       }
 
-      if (room.players.size < MIN_PLAYERS && room.status === 'countdown') {
+      if (room.players.size < MIN_PLAYERS && room.status === "countdown") {
         cancelCountdown(room);
       }
 
-      io.to(room.roomId).emit('lobby:state', serializeRoom(room));
+      io.to(room.roomId).emit("lobby:state", serializeRoom(room));
 
-      if (room.status === 'starting' && room.standings.size > 0) {
+      if (room.status === "starting" && room.standings.size > 0) {
         recomputePositions(room);
         broadcastStandings(io, room);
 
         // If all remaining players have finished, emit results
-        const allDone = Array.from(room.standings.values()).every((s) => s.entry.finished);
+        const allDone = Array.from(room.standings.values()).every(
+          (s) => s.entry.finished,
+        );
         if (allDone && room.standings.size > 0) {
           const results: RaceResultEntry[] = Array.from(room.standings.values())
             .map((s) => ({
@@ -312,7 +342,7 @@ export function attachSocketIO(httpServer: HttpServer) {
               timeTaken: s.timeTaken,
             }))
             .sort((a, b) => a.position - b.position);
-          io.to(room.roomId).emit('race:results', results);
+          io.to(room.roomId).emit("race:results", results);
         }
       }
     }

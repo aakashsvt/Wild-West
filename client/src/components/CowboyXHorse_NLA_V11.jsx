@@ -12,9 +12,12 @@ export const Model11 = forwardRef((props, ref) => {
   const group = React.useRef();
   const { scene, animations } = useGLTF("/models/CowboyXHorse_NLA_V11.glb");
   const clone = React.useMemo(() => SkeletonUtils.clone(scene), [scene]);
+  const localAnimations = React.useMemo(
+    () => animations.map((clip) => clip.clone()),
+    [animations],
+  );
   const { nodes, materials } = useGraph(clone);
-  const { actions } = useAnimations(animations, group);
-  console.log("act", actions);
+  const { actions } = useAnimations(localAnimations, group);
   useImperativeHandle(ref, () => ({
     actions,
   }));

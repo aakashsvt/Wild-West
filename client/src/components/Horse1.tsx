@@ -31,7 +31,6 @@ export const Horse1 = forwardRef((props: HorseProps, ref) => {
 
   const { actions } = useAnimations(animations, group);
 
-  console.log("actions", actions, materials.Horse);
   // 🎨 Clone materials per instance
   const horseMaterial = useMemo(() => {
     const mat = materials.Horse.clone();
