@@ -21,9 +21,9 @@ import { Model11 } from "./CowboyXHorse_NLA_V11";
 import { isRemoteKicking, getSocketIdForBody, setRemoteStun } from "@/lib/remoke-kicks";
 // const PLAYER_START_POSITION: [number, number, number] = [-340, 5.5787, 410];
 
-const PLAYER_START_POSITION: [number, number, number] = [422.5, 25, -25.1];
+const PLAYER_START_POSITION: [number, number, number] = [422.5, 150, -25.1];
 
-const MAX_SPEED = 160;
+const MAX_SPEED = 260;
 const ACCELERATION = 50;
 const TURN_SPEED = 2;
 const BRAKE_FORCE = 5;
@@ -38,7 +38,7 @@ const FOLLOW_LERP = 0.1;
 const FOV_BASE = 60;
 const FOV_BOOST = 5;
 const NETWORK_STATE_INTERVAL = 1 / 30;
-const START_LANE_SPACING = 15;
+const START_LANE_SPACING = 10;
 type Props = {
   playerRef: React.MutableRefObject<RapierRigidBody | null>;
 };
@@ -529,12 +529,12 @@ export function PlayerController({ playerRef }: Props) {
       <CuboidCollider args={[0.5, 0.5, 2]} position={[0.5, 0.5, 0]} />
       <CuboidCollider args={[0.5, 0.5, 2]} position={[-0.5, 0.5, 0]} /> */}
       {/* <CuboidCollider args={[0.5, 1, 2]} position={[0, 1.7, 0]} /> */}
-      <RoundCuboidCollider
+      {/* <RoundCuboidCollider
         args={[1.4, 0.7, 5, 0.2]}
         position={[0, 0.9, 1]}
         restitution={0}
 
-      />
+      /> */}
       <RoundCuboidCollider
         args={[1.4, 1.7, 2, 0.2]}
         position={[0, 7, 0]}

@@ -19,9 +19,9 @@ import { Model1 } from "./CowboyXHorse_GLB_v08";
 import { Model11 } from "./CowboyXHorse_NLA_V11";
 import { registerRemoteBody, setRemoteKicking, unregisterRemoteBody } from "@/lib/remoke-kicks";
 const PLAYER_COLORS = ["#d4a853", "#c0392b", "#2980b9", "#5a8a4a"];
-const PLAYER_START_POSITION: Vec3Tuple = [422.5, 25, -25.1];
+const PLAYER_START_POSITION: Vec3Tuple = [422.5, 150, -25.1];
 const PLAYER_START_ROTATION_Y = 2.5;
-const START_LANE_SPACING = 5;
+const START_LANE_SPACING = 10;
 const MAX_EXTRAPOLATION_SECONDS = 0.12;
 
 type RemoteRiderProps = {
@@ -337,12 +337,12 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
         ccd
 
       >
-        <RoundCuboidCollider
+        {/* <RoundCuboidCollider
           args={[1.4, 0.7, 5, 0.2]}
           position={[0, 0.9, 1]}
           restitution={0}
 
-        />
+        /> */}
         <RoundCuboidCollider
           args={[1.4, 1.7, 2, 0.2]}
           position={[0, 7, 0]}
