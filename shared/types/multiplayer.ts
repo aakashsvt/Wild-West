@@ -16,6 +16,7 @@ export interface LobbyRoom {
 }
 
 export interface StandingEntry {
+  timeTaken: number;
   username: string;
   colorIndex: number;
   score: number;
