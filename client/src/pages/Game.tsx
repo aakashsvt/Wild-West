@@ -16,7 +16,7 @@ import { useGameStore } from "@/hooks/use-game-store";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
 import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import { Loader2 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, Redirect } from "wouter";
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
@@ -311,7 +311,18 @@ export default function Game() {
   const speedRef = useRef(0)
 
   const { speed, score, timeElapsed, isPlaying, isGameOver } = useGameStore()
-  const { setLobbyState, setStandings, setRaceResults } = useLobbyStore()
+  const { roomId, setLobbyState, setStandings, setRaceResults, resetLobby } = useLobbyStore()
+
+  if (!roomId) return <Redirect to="/lobby" />;
+
+  // Notify server when this player leaves the game page so other clients
+  // receive a lobby:state update and remove this player immediately.
+  useEffect(() => {
+    return () => {
+      getSocket().emit('lobby:leave');
+      resetLobby();
+    };
+  }, [resetLobby]);
 
   useEffect(() => {
     speedRef.current = speed

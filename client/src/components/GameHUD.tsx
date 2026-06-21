@@ -1,6 +1,6 @@
 import { useGameStore } from "@/hooks/use-game-store";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Western player colours — must match Lobby.tsx
@@ -25,8 +25,19 @@ const W = {
 
 export function GameHUD() {
   const { speed, score, timeElapsed, incrementTime, isPlaying } = useGameStore();
-  const { standings, raceResults } = useLobbyStore();
-  const mySocketId = typeof window !== "undefined" ? (window as any).__socketId : null;
+  const { standings, raceResults, socketId, players } = useLobbyStore();
+
+  // Resolve this client's username: socketId → players list → username
+  const myUsername = useMemo(
+    () => players.find((p) => p.socketId === socketId)?.username ?? null,
+    [players, socketId],
+  );
+
+  // Sort standings by position (server sets position but sends unsorted)
+  const sortedStandings = useMemo(
+    () => (standings.length > 0 ? [...standings].sort((a, b) => a.position - b.position) : []),
+    [standings],
+  );
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -109,6 +120,104 @@ export function GameHUD() {
           </div>
         </motion.div>
       </div>
+
+      {/* ── Live standings sidebar ───────────────────────────────────────── */}
+      <AnimatePresence>
+        {sortedStandings.length > 0 && !raceResults && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3 }}
+            className="absolute right-5 flex flex-col gap-1.5"
+            style={{ top: "50%", transform: "translateY(-50%)" }}
+          >
+            {/* Header */}
+            <div
+              className="flex items-center gap-2 px-3 pb-1.5 mb-0.5"
+              style={{ borderBottom: `1px solid ${W.borderWarm}50` }}
+            >
+              <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, transparent, ${W.borderWarm}60)` }} />
+              <span
+                className="font-mono text-[9px] tracking-[0.3em] uppercase"
+                style={{ color: W.borderWarm }}
+              >
+                Standings
+              </span>
+              <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, transparent, ${W.borderWarm}60)` }} />
+            </div>
+
+            {/* Player rows */}
+            {sortedStandings.map((entry) => {
+              const isMe = entry.username === myUsername;
+              const color = PLAYER_COLORS[entry.colorIndex] ?? W.goldBright;
+              const posLabel = POSITION_LABELS[entry.position - 1] ?? `${entry.position}`;
+
+              return (
+                <div
+                  key={entry.username}
+                  className="flex items-center gap-2 rounded px-3 py-1.5"
+                  style={{
+                    background: isMe
+                      ? `${color}18`
+                      : `${W.panelDark}cc`,
+                    border: `1px solid ${isMe ? color + "50" : W.borderDim}`,
+                    minWidth: "160px",
+                    backdropFilter: "blur(6px)",
+                  }}
+                >
+                  {/* Position */}
+                  <span
+                    className="font-western text-xs w-7 flex-shrink-0 text-right"
+                    style={{ color: entry.finished ? W.creamMuted : color }}
+                  >
+                    {posLabel}
+                  </span>
+
+                  {/* Colour dot */}
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}80` }}
+                  />
+
+                  {/* Name */}
+                  <span
+                    className="flex-1 font-western text-xs tracking-wide truncate"
+                    style={{
+                      color: isMe ? W.cream : W.creamMuted,
+                      maxWidth: "76px",
+                    }}
+                  >
+                    {entry.username}
+                    {isMe && (
+                      <span className="font-mono text-[8px] normal-case ml-1" style={{ color: W.borderWarm }}>
+                        you
+                      </span>
+                    )}
+                  </span>
+
+                  {/* Score or finished badge */}
+                  {entry.finished ? (
+                    <span
+                      className="font-mono text-[9px] tracking-widest uppercase flex-shrink-0"
+                      style={{ color: "#5a8a4a" }}
+                    >
+                      ✓
+                    </span>
+                  ) : (
+                    <span
+                      className="font-mono text-[9px] tabular-nums flex-shrink-0"
+                      style={{ color: W.creamMuted }}
+                    >
+                      {entry.score.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Race results overlay ──────────────────────────────────────────── */}
       <AnimatePresence>

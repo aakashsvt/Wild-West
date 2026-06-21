@@ -1,38 +1,73 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Store, Gem, Shirt, UserRound } from "lucide-react";
-import { useGameStore } from "@/hooks/use-game-store";
+import { Play, Store, Gem, Shirt, UserRound, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 import { HOME_CONFIG } from "@/config/home-config";
+import { useAuthStore } from "@/store/auth-store";
+import { useMe, useLogout } from "@/hooks/use-auth";
+import { useMyStats } from "@/hooks/use-user-stats";
+import { AuthModal } from "@/components/AuthModal";
+import { StatsModal } from "@/components/StatsModal";
+import { CustomizeModal } from "@/components/CustomizeModal";
 
-// ── Western colour tokens (all raw hex so they're tree-shakeable) ──────────
 const W = {
-  bg:          "#0a0603",   // near-black with brown cast
-  panelDark:   "#130a04",   // panel background
-  panelMid:    "#1e0f06",   // slightly lighter panel
-  borderDim:   "#3d1e0a",   // subtle border
-  borderWarm:  "#6b3820",   // warm visible border
-  borderGold:  "#a07030",   // gold border
-  gold:        "#c8922a",   // primary gold accent
-  goldBright:  "#d4a853",   // highlight gold
-  goldPale:    "#e8c87a",   // pale gold
-  cream:       "#e8d5b0",   // parchment text
-  creamMuted:  "#b89a72",   // muted parchment
-  rust:        "#8b3d1f",   // rust/copper accent
-  rustDim:     "#5c2810",   // dimmed rust
-  denim:       "#1e3a5f",   // cowboy denim blue (for name badge)
+  bg:          "#0a0603",
+  panelDark:   "#130a04",
+  panelMid:    "#1e0f06",
+  borderDim:   "#3d1e0a",
+  borderWarm:  "#6b3820",
+  borderGold:  "#a07030",
+  gold:        "#c8922a",
+  goldBright:  "#d4a853",
+  goldPale:    "#e8c87a",
+  cream:       "#e8d5b0",
+  creamMuted:  "#b89a72",
+  rust:        "#8b3d1f",
+  rustDim:     "#5c2810",
+  denim:       "#1e3a5f",
   denimBorder: "#2a5480",
 } as const;
 
+function deriveLevel(raceCount: number) {
+  const level = Math.floor(raceCount / 5) + 1;
+  const xp    = (raceCount % 5) * 20;
+  return { level, xp, xpMax: 100 };
+}
+
 export default function Home() {
-  const { startGame } = useGameStore();
   const [_loc, setLocation] = useLocation();
-  const { branding, player, currency, topRight, background, buttons } = HOME_CONFIG;
+  const [authOpen,      setAuthOpen]      = useState(false);
+  const [authTab,       setAuthTab]       = useState<"signin" | "signup">("signin");
+  const [statsOpen,     setStatsOpen]     = useState(false);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const storeUser       = useAuthStore((s) => s.user);
+  const logout          = useLogout();
+
+  const { data: meData } = useMe();
+  const { data: stats }  = useMyStats();
+
+  const { branding, currency, topRight, background } = HOME_CONFIG;
+
+  const playerName = storeUser?.username ?? "Rider";
+  const coins      = storeUser?.coins    ?? currency.gold;
+  const raceCount  = stats?.race_count   ?? 0;
+  const winCount   = stats?.win_count    ?? 0;
+  const { level, xp, xpMax } = deriveLevel(raceCount);
+  const xpPct = Math.min(100, (xp / xpMax) * 100);
+
+  const openSignIn = () => { setAuthTab("signin"); setAuthOpen(true); };
+  const openSignUp = () => { setAuthTab("signup"); setAuthOpen(true); };
 
   const handleStart = () => {
+    if (!isAuthenticated) { openSignIn(); return; }
     setLocation("/lobby");
   };
 
-  const xpPct = player.xpMax > 0 ? Math.min(100, (player.xp / player.xpMax) * 100) : 0;
+  const handleLevelBadgeClick = () => {
+    if (isAuthenticated) setStatsOpen(true);
+  };
 
   return (
     <div
@@ -40,8 +75,6 @@ export default function Home() {
       style={{ background: W.bg, color: W.cream }}
     >
       {/* ── Background ──────────────────────────────────────────────────── */}
-
-      {/* Base atmosphere: dark desert gradient */}
       <div
         aria-hidden
         className="absolute inset-0 z-0 pointer-events-none"
@@ -52,7 +85,6 @@ export default function Home() {
       />
 
       {background.gifUrl ? (
-        /* GIF background */
         <img
           src={background.gifUrl}
           alt=""
@@ -61,7 +93,6 @@ export default function Home() {
           style={{ objectFit: background.gifFit }}
         />
       ) : (
-        /* Default: subtle old-map grid in earthy tones */
         <div
           aria-hidden
           className="absolute inset-0 z-0 pointer-events-none"
@@ -74,7 +105,6 @@ export default function Home() {
         />
       )}
 
-      {/* Vignette — darkens corners so center content pops */}
       <div
         aria-hidden
         className="absolute inset-0 z-0 pointer-events-none"
@@ -87,36 +117,38 @@ export default function Home() {
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
       <div className="relative z-30 flex-shrink-0 flex items-center justify-between px-4 pt-3 pb-2">
 
-        {/* Level badge */}
-        <motion.div
+        {/* Level / XP badge — clickable when logged in */}
+        <motion.button
+          onClick={handleLevelBadgeClick}
           initial={{ x: -24, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.4 }}
-          className="flex items-center gap-2 rounded px-3 py-2"
+          whileHover={isAuthenticated ? { scale: 1.03 } : undefined}
+          whileTap={isAuthenticated ? { scale: 0.97 } : undefined}
+          className="flex items-center gap-2 rounded px-3 py-2 transition-colors"
           style={{
-            background: `${W.panelDark}dd`,
-            border: `1px solid ${W.borderWarm}80`,
-            boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
+            background:  `${W.panelDark}dd`,
+            border:      `1px solid ${isAuthenticated ? W.borderGold : W.borderWarm}80`,
+            boxShadow:   "0 2px 12px rgba(0,0,0,0.5)",
+            cursor:      isAuthenticated ? "pointer" : "default",
           }}
         >
-          {/* Level coin */}
           <div
             className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center"
             style={{
               background: `linear-gradient(160deg, ${W.goldBright}, ${W.gold} 50%, #7a4e10)`,
-              border: `2px solid ${W.goldPale}60`,
-              boxShadow: `0 0 10px ${W.gold}40`,
+              border:     `2px solid ${W.goldPale}60`,
+              boxShadow:  `0 0 10px ${W.gold}40`,
             }}
           >
             <span className="font-western text-sm leading-none" style={{ color: W.bg }}>
-              {player.level}
+              {level}
             </span>
           </div>
 
-          {/* XP bar */}
           <div className="flex flex-col gap-[4px] w-24">
             <span className="text-[10px] font-mono leading-none" style={{ color: W.creamMuted }}>
-              {player.xp} / {player.xpMax}
+              {isAuthenticated ? `${xp} / ${xpMax} XP` : "Sign in"}
             </span>
             <div
               className="h-1.5 rounded-sm overflow-hidden"
@@ -125,38 +157,43 @@ export default function Home() {
               <div
                 className="h-full rounded-sm transition-all"
                 style={{
-                  width: `${xpPct}%`,
+                  width:      `${xpPct}%`,
                   background: `linear-gradient(90deg, ${W.gold}, ${W.goldBright})`,
                 }}
               />
             </div>
           </div>
 
-          {/* Multiplier chip */}
           <div
             className="flex items-center gap-1 rounded-sm px-2 py-1"
-            style={{
-              background: W.panelMid,
-              border: `1px solid ${W.borderWarm}60`,
-            }}
+            style={{ background: W.panelMid, border: `1px solid ${W.borderWarm}60` }}
           >
             <span className="text-xs leading-none" style={{ color: W.goldBright }}>✦</span>
             <span className="font-mono text-xs leading-none" style={{ color: W.cream }}>
-              {player.xpMultiplier}
+              {raceCount > 0 ? `${winCount}W` : "—"}
             </span>
           </div>
-        </motion.div>
+
+          {/* Hint pip when logged in */}
+          {isAuthenticated && (
+            <span className="text-[9px] font-mono tracking-wide" style={{ color: `${W.gold}80` }}>
+              ▼
+            </span>
+          )}
+        </motion.button>
 
         {/* General Store */}
         <motion.button
           initial={{ x: 24, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.4 }}
-          disabled
-          className="flex items-center gap-2 rounded px-4 py-2 cursor-not-allowed opacity-50"
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => setLocation("/salon")}
+          className="flex items-center gap-2 rounded px-4 py-2"
           style={{
             background: `${W.panelDark}dd`,
-            border: `1px solid ${W.borderWarm}70`,
+            border:     `1px solid ${W.borderWarm}70`,
           }}
         >
           <Store className="w-4 h-4" style={{ color: W.gold }} />
@@ -181,18 +218,18 @@ export default function Home() {
             className="rounded p-3 flex flex-col gap-3"
             style={{
               background: `${W.panelDark}e0`,
-              border: `1px solid ${W.borderWarm}60`,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+              border:     `1px solid ${W.borderWarm}60`,
+              boxShadow:  "0 4px 20px rgba(0,0,0,0.5)",
             }}
           >
-            {/* Gold */}
+            {/* Gold / Coins */}
             <div className="flex items-center gap-2.5">
               <div
                 className="w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center"
                 style={{
                   background: `linear-gradient(160deg, ${W.goldBright}, ${W.gold} 60%, #7a4e10)`,
-                  border: `2px solid ${W.goldPale}50`,
-                  boxShadow: `0 0 8px ${W.gold}30`,
+                  border:     `2px solid ${W.goldPale}50`,
+                  boxShadow:  `0 0 8px ${W.gold}30`,
                 }}
               >
                 <span className="font-black text-sm leading-none" style={{ color: W.bg }}>$</span>
@@ -202,7 +239,7 @@ export default function Home() {
                 style={{ background: `${W.bg}cc`, border: `1px solid ${W.borderDim}` }}
               >
                 <span className="font-western text-base leading-none" style={{ color: W.cream }}>
-                  {currency.gold.toLocaleString()}
+                  {coins.toLocaleString()}
                 </span>
               </div>
             </div>
@@ -213,8 +250,8 @@ export default function Home() {
                 className="w-10 h-10 flex-shrink-0 rounded flex items-center justify-center"
                 style={{
                   background: `linear-gradient(160deg, ${W.rust}, ${W.rustDim})`,
-                  border: `2px solid ${W.rust}60`,
-                  boxShadow: `0 0 8px ${W.rust}20`,
+                  border:     `2px solid ${W.rust}60`,
+                  boxShadow:  `0 0 8px ${W.rust}20`,
                 }}
               >
                 <Gem className="w-5 h-5" style={{ color: W.cream }} />
@@ -235,64 +272,81 @@ export default function Home() {
             className="rounded p-3 flex flex-col gap-2"
             style={{
               background: `${W.panelDark}e0`,
-              border: `1px solid ${W.borderWarm}60`,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+              border:     `1px solid ${W.borderWarm}60`,
+              boxShadow:  "0 4px 20px rgba(0,0,0,0.5)",
             }}
           >
-            {/* Name — denim sheriff-sign look */}
+            {/* Name */}
             <div
               className="flex items-center gap-2 rounded-sm px-3 py-2.5"
               style={{
                 background: `${W.denim}99`,
-                border: `1px solid ${W.denimBorder}60`,
+                border:     `1px solid ${W.denimBorder}60`,
               }}
             >
               <span className="text-sm leading-none" style={{ color: W.goldBright }}>✦</span>
               <span className="font-western text-sm tracking-wide truncate" style={{ color: W.cream }}>
-                {player.name}
+                {playerName}
               </span>
             </div>
 
-            {/* Outfit (Customize) */}
+            {/* Customize */}
             <button
-              disabled
-              className="flex items-center gap-2 rounded-sm px-3 py-3 cursor-not-allowed w-full"
+              onClick={() => isAuthenticated && setCustomizeOpen(true)}
+              disabled={!isAuthenticated}
+              className="flex items-center gap-2 rounded-sm px-3 py-3 w-full transition-opacity hover:opacity-80"
               style={{
                 background: `${W.panelMid}80`,
-                border: `1px solid ${W.borderDim}`,
-                color: `${W.creamMuted}55`,
+                border:     `1px solid ${isAuthenticated ? W.borderGold + "60" : W.borderDim}`,
+                color:      isAuthenticated ? W.cream : `${W.creamMuted}55`,
+                cursor:     isAuthenticated ? "pointer" : "not-allowed",
               }}
             >
-              <Shirt className="w-4 h-4 flex-shrink-0" style={{ color: `${W.borderWarm}` }} />
-              <span className="font-western text-sm tracking-wide">{buttons.customize.label}</span>
+              <Shirt className="w-4 h-4 flex-shrink-0" style={{ color: isAuthenticated ? W.goldBright : W.borderWarm }} />
+              <span className="font-western text-sm tracking-wide">Customize</span>
             </button>
 
-            {/* Sign In */}
-            <button
-              disabled
-              className="flex flex-col items-center gap-1 rounded-sm px-3 py-3 cursor-not-allowed w-full"
-              style={{
-                background: `${W.panelMid}80`,
-                border: `1px solid ${W.borderDim}`,
-              }}
-            >
-              <div className="flex items-center gap-1.5">
-                <UserRound className="w-3.5 h-3.5 flex-shrink-0" style={{ color: `${W.borderWarm}` }} />
-                <span className="font-western text-sm tracking-wide" style={{ color: `${W.creamMuted}55` }}>
-                  {buttons.signIn.label}
+            {/* Sign In / Out */}
+            {isAuthenticated ? (
+              <button
+                onClick={logout}
+                className="flex items-center gap-2 rounded-sm px-3 py-3 w-full transition-opacity hover:opacity-80"
+                style={{
+                  background: `${W.rust}30`,
+                  border:     `1px solid ${W.rust}60`,
+                }}
+              >
+                <LogOut className="w-3.5 h-3.5 flex-shrink-0" style={{ color: W.rust }} />
+                <span className="font-western text-sm tracking-wide" style={{ color: W.rust }}>
+                  Sign Out
                 </span>
-              </div>
-              <span className="text-[11px] tracking-wide" style={{ color: `${W.borderWarm}99` }}>
-                {buttons.signIn.subLabel}
-              </span>
-            </button>
+              </button>
+            ) : (
+              <button
+                onClick={openSignIn}
+                className="flex flex-col items-center gap-1 rounded-sm px-3 py-3 w-full transition-opacity hover:opacity-80"
+                style={{
+                  background: `${W.panelMid}80`,
+                  border:     `1px solid ${W.borderGold}60`,
+                }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <UserRound className="w-3.5 h-3.5 flex-shrink-0" style={{ color: W.gold }} />
+                  <span className="font-western text-sm tracking-wide" style={{ color: W.goldBright }}>
+                    Sign In / Up
+                  </span>
+                </div>
+                <span className="text-[11px] tracking-wide" style={{ color: `${W.borderWarm}99` }}>
+                  Earn 100 gold on sign-up!
+                </span>
+              </button>
+            )}
           </div>
         </motion.div>
 
         {/* ── Center: title + PLAY ─────────────────────────────────────── */}
         <div className="flex-1 flex flex-col items-center justify-center min-w-0 gap-5 px-4">
 
-          {/* Eyebrow ornament */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -306,7 +360,6 @@ export default function Home() {
             <div className="h-px w-12" style={{ background: `linear-gradient(to left, transparent, ${W.gold})` }} />
           </motion.div>
 
-          {/* Game title */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -315,10 +368,7 @@ export default function Home() {
           >
             <h1
               className="font-western leading-tight tracking-wider text-shadow-western"
-              style={{
-                fontSize: "clamp(2.4rem, 5vw, 4.5rem)",
-                color: W.cream,
-              }}
+              style={{ fontSize: "clamp(2.4rem, 5vw, 4.5rem)", color: W.cream }}
             >
               {branding.title}
             </h1>
@@ -330,7 +380,6 @@ export default function Home() {
             </p>
           </motion.div>
 
-          {/* Decorative rule */}
           <div className="flex items-center gap-3 w-full max-w-xs">
             <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, transparent, ${W.borderWarm})` }} />
             <span style={{ color: W.gold }}>✦</span>
@@ -347,13 +396,13 @@ export default function Home() {
             whileTap={{ scale: 0.95 }}
             className="flex items-center gap-4 rounded px-16 py-5"
             style={{
-              background: `linear-gradient(175deg, ${W.goldBright} 0%, ${W.gold} 45%, #8b5e18 100%)`,
-              border: `2px solid ${W.goldBright}90`,
-              color: W.bg,
-              fontFamily: "var(--font-western)",
-              fontSize: "clamp(1.6rem, 2.5vw, 2.2rem)",
+              background:    `linear-gradient(175deg, ${W.goldBright} 0%, ${W.gold} 45%, #8b5e18 100%)`,
+              border:        `2px solid ${W.goldBright}90`,
+              color:         W.bg,
+              fontFamily:    "var(--font-western)",
+              fontSize:      "clamp(1.6rem, 2.5vw, 2.2rem)",
               letterSpacing: "0.18em",
-              boxShadow: `
+              boxShadow:     `
                 0 0 60px ${W.gold}55,
                 0 4px 20px rgba(0,0,0,0.6),
                 inset 0 1px 0 ${W.goldPale}50,
@@ -362,13 +411,50 @@ export default function Home() {
             }}
           >
             <Play className="fill-current flex-shrink-0" style={{ width: "2rem", height: "2rem" }} />
-            {buttons.play.label}
+            PLAY
           </motion.button>
+
+          {!isAuthenticated && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-xs font-mono tracking-wider"
+              style={{ color: `${W.borderWarm}99` }}
+            >
+              Sign in to ride — or{" "}
+              <button
+                onClick={openSignUp}
+                className="underline underline-offset-2 hover:opacity-80 transition-opacity"
+                style={{ color: W.gold }}
+              >
+                create an account
+              </button>
+            </motion.p>
+          )}
         </div>
 
-        {/* Mirror gutter — keeps center truly centered */}
         <div className="flex-shrink-0 w-52 lg:w-56 xl:w-60" aria-hidden />
       </div>
+
+      {/* ── Modals ──────────────────────────────────────────────────────── */}
+      <AuthModal
+        open={authOpen}
+        onOpenChange={setAuthOpen}
+        defaultTab={authTab}
+      />
+
+      <StatsModal
+        open={statsOpen}
+        onOpenChange={setStatsOpen}
+        user={meData ?? storeUser}
+        stats={stats}
+      />
+
+      <CustomizeModal
+        open={customizeOpen}
+        onOpenChange={setCustomizeOpen}
+      />
     </div>
   );
 }

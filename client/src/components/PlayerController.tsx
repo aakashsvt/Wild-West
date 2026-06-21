@@ -18,7 +18,11 @@ import { Model1 } from "./CowboyXHorse_GLB_v08";
 import * as THREE from "three";
 import { PerspectiveCamera } from "three";
 import { Model11 } from "./CowboyXHorse_NLA_V11";
-import { isRemoteKicking, getSocketIdForBody, setRemoteStun } from "@/lib/remoke-kicks";
+import {
+  isRemoteKicking,
+  getSocketIdForBody,
+  setRemoteStun,
+} from "@/lib/remoke-kicks";
 // const PLAYER_START_POSITION: [number, number, number] = [-340, 5.5787, 410];
 
 const PLAYER_START_POSITION: [number, number, number] = [422.5, 150, -25.1];
@@ -61,11 +65,19 @@ export function PlayerController({ playerRef }: Props) {
   const socketId = useLobbyStore((state) => state.socketId);
   const camera = useThree((state) => state.camera as PerspectiveCamera);
 
+  // Snapshot players when the game starts so that players leaving mid-race
+  // don't shift lane offsets and teleport everyone back to spawn.
+  const playersSnapshot = useRef(players);
+  useEffect(() => {
+    if (!isPlaying) playersSnapshot.current = players;
+  }, [isPlaying, players]);
+
   const startTransform = useMemo(() => {
-    const playerIndex = players.findIndex(
+    const activePlayers = playersSnapshot.current;
+    const playerIndex = activePlayers.findIndex(
       (player) => player.socketId === (socketId ?? getSocket().id),
     );
-    const laneCount = Math.max(players.length, 1);
+    const laneCount = Math.max(activePlayers.length, 1);
     const laneIndex = playerIndex >= 0 ? playerIndex : 0;
     const centerIndex = (laneCount - 1) / 2;
     const spawnEuler = new Euler(0, PLAYER_START_ROTATION_Y, 0);
@@ -80,7 +92,7 @@ export function PlayerController({ playerRef }: Props) {
       position,
       positionTuple: [position.x, position.y, position.z] as Vec3Tuple,
     };
-  }, [players, socketId]);
+  }, [socketId]);
 
   // Smooth the follow anchor and facing while keeping the offset distance fixed.
   const cameraTarget = useRef(new Vector3());
@@ -123,18 +135,24 @@ export function PlayerController({ playerRef }: Props) {
 
     // Check distance from local player to remote player
     const localPos = body.current.translation();
-    const remotePos = new Vector3(state.position[0], state.position[1], state.position[2]);
+    const remotePos = new Vector3(
+      state.position[0],
+      state.position[1],
+      state.position[2],
+    );
     const distance = Math.hypot(
       localPos.x - remotePos.x,
       localPos.y - remotePos.y,
-      localPos.z - remotePos.z
+      localPos.z - remotePos.z,
     );
 
     // If remote is within kick range (~10 units), stun the local player
     const KICK_RANGE = 10;
     if (distance < KICK_RANGE) {
       stunnedUntil.current = performance.now() + 2000;
-      console.log(`aaaaa[LOCAL STUN] Remote player at distance ${distance.toFixed(1)} is kicking, local player stunned`);
+      console.log(
+        `aaaaa[LOCAL STUN] Remote player at distance ${distance.toFixed(1)} is kicking, local player stunned`,
+      );
     }
   }, []);
 
@@ -150,10 +168,8 @@ export function PlayerController({ playerRef }: Props) {
     const isStunned = stunnedUntil.current > now;
     if (isStunned) {
       const linvel = rb.linvel();
-      const pos = rb.translation();
-      // Freeze horizontal movement but keep vertical (for gravity)
       rb.setLinvel({ x: 0, y: linvel.y, z: 0 }, true);
-      console.log(`[STUN ACTIVE] Local player stunned, freezing movement`);
+      playAnimation("IDLE");
       return;
     }
 
@@ -280,27 +296,30 @@ export function PlayerController({ playerRef }: Props) {
     // =========================
     // 🎞 ANIMATIONS
     // =========================
-    if (jump) {
-      playAnimation("JUMP");
-    } else if (forward) {
-      if (left) playAnimation("RUN_LEFT");
-      else if (right) playAnimation("RUN_RIGHT");
-      else {
-        playAnimation("RUN");
-        if (kickLeft) playAnimation("RUN_KICK_LEFT", "overlay");
-        else if (kickRight) playAnimation("RUN_KICK_RIGHT", "overlay");
+    if (!isStunned) {
+      if (jump) {
+        playAnimation("JUMP");
+      } else if (forward) {
+        if (left) playAnimation("RUN_LEFT");
+        else if (right) playAnimation("RUN_RIGHT");
+        else {
+          playAnimation("RUN");
+          if (kickLeft) playAnimation("RUN_KICK_LEFT", "overlay");
+          else if (kickRight) playAnimation("RUN_KICK_RIGHT", "overlay");
+        }
+      } else if (backward) {
+        playAnimation("WALK");
+      } else if (left) {
+        playAnimation("TURN_LEFT");
+      } else if (right) {
+        playAnimation("TURN_RIGHT");
+      } else {
+        if (currentSpeed > 15) playAnimation("RUN");
+        else if (currentSpeed > 6) playAnimation("WALK");
+        else playAnimation("IDLE");
       }
-    } else if (backward) {
-      playAnimation("WALK");
-    } else if (left) {
-      playAnimation("TURN_LEFT");
-    } else if (right) {
-      playAnimation("TURN_RIGHT");
-    }
-    else {
-      if (currentSpeed > 15) playAnimation("RUN");
-      else if (currentSpeed > 6) playAnimation("WALK");
-      else playAnimation("IDLE");
+    } else {
+      playAnimation("IDLE");
     }
 
     // =========================
@@ -448,7 +467,8 @@ export function PlayerController({ playerRef }: Props) {
       const overlayClip = next.getClip();
       if (!(overlayClip as any).__legMasked) {
         const include = /leg|foot|thigh|knee|shin|ankle|toe|calf|tibia|fibula/i;
-        const exclude = /hip|pelvis|root|spine|neck|head|chest|shoulder|arm|hand|finger|torso/i;
+        const exclude =
+          /hip|pelvis|root|spine|neck|head|chest|shoulder|arm|hand|finger|torso/i;
         const original = overlayClip.tracks;
         const filtered = original.filter(
           (t: THREE.KeyframeTrack) =>
@@ -539,13 +559,11 @@ export function PlayerController({ playerRef }: Props) {
         args={[1.4, 1.7, 2, 0.2]}
         position={[0, 7, 0]}
         restitution={0}
-
       />
       <RoundCuboidCollider
         args={[1.4, 2.7, 5, 0.2]}
         position={[0, 2.9, 1]}
         restitution={0}
-
       />
       {/* Sensor used to detect kick hits in front of the rider */}
       <RoundCuboidCollider
@@ -566,7 +584,9 @@ export function PlayerController({ playerRef }: Props) {
           const myId = socketId ?? getSocket().id;
           if (targetSocketId === myId) return;
           collisionHitsDuringOverlay.current.add(otherHandle);
-          console.log(`aaaaaa[kick] ${myId} hit ${targetSocketId} with ${currentOverlayName.current}`);
+          console.log(
+            `aaaaaa[kick] ${myId} hit ${targetSocketId} with ${currentOverlayName.current}`,
+          );
           setRemoteStun(otherBody, 2000);
         }}
       />

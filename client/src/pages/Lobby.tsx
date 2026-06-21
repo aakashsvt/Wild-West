@@ -5,6 +5,7 @@ import { CheckCircle2, Circle } from "lucide-react";
 import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
 import { useGameStore } from "@/hooks/use-game-store";
+import { useAuthStore } from "@/store/auth-store";
 import type { LobbyRoom } from "@shared/types/multiplayer";
 
 // Western player colours — earthy and distinct
@@ -30,7 +31,13 @@ const W = {
 
 export default function Lobby() {
   const [_loc, setLocation] = useLocation();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const authUser = useAuthStore((s) => s.user);
   const { startGame } = useGameStore();
+
+  useEffect(() => {
+    if (!isAuthenticated) setLocation("/");
+  }, [isAuthenticated]);
   const {
     players,
     status,
@@ -44,7 +51,7 @@ export default function Lobby() {
     resetLobby,
   } = useLobbyStore();
 
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(authUser?.username ?? "");
   const [hasJoined, setHasJoined] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const hasStarted = useRef(false);
@@ -76,6 +83,11 @@ export default function Lobby() {
   useSocketEvent("lobby:error", onError);
   useSocketEvent("lobby:start", onStart);
 
+  // Reset stale lobby state from any previous race on every mount
+  useEffect(() => {
+    resetLobby();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     const socket = getSocket();
     const onConnect = () => {
@@ -88,7 +100,15 @@ export default function Lobby() {
     };
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
-    socket.connect();
+
+    if (socket.connected) {
+      // Socket is already alive (returning from a race) — sync state immediately
+      setIsConnected(true);
+      if (socket.id) setSocketId(socket.id);
+    } else {
+      socket.connect();
+    }
+
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
@@ -103,6 +123,7 @@ export default function Lobby() {
   };
 
   const handleReady = () => getSocket().emit("lobby:ready");
+  const handleUnready = () => getSocket().emit("lobby:unready");
 
   const handleBack = () => {
     getSocket().emit("lobby:leave");
@@ -403,6 +424,30 @@ export default function Lobby() {
                   ) : (
                     "Ready Up"
                   )}
+                </button>
+              )}
+
+              {/* Unready button — only visible when already ready */}
+              {status === "waiting" && isReady && (
+                <button
+                  onClick={handleUnready}
+                  className="w-full rounded py-2 font-western text-sm tracking-wider transition-all"
+                  style={{
+                    background: "transparent",
+                    border: `1px solid ${W.borderWarm}50`,
+                    color: W.creamMuted,
+                    letterSpacing: "0.12em",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = W.rust;
+                    e.currentTarget.style.color = W.cream;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = `${W.borderWarm}50`;
+                    e.currentTarget.style.color = W.creamMuted;
+                  }}
+                >
+                  Cancel Ready
                 </button>
               )}
             </motion.div>
