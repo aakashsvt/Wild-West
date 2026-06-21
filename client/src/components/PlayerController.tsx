@@ -6,24 +6,24 @@ import {
   CapsuleCollider,
   RoundCuboidCollider,
 } from "@react-three/rapier";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useCallback } from "react";
 import { Vector3, Quaternion, Euler } from "three";
 import { useKeyboardControls } from "@react-three/drei";
 import { useGameStore } from "@/hooks/use-game-store";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
-import { getSocket } from "@/hooks/use-socket";
-import type { Vec3Tuple } from "@shared/types/multiplayer";
+import { getSocket, useSocketEvent } from "@/hooks/use-socket";
+import type { Vec3Tuple, RacePlayerState } from "@shared/types/multiplayer";
 import { Model } from "./CowboyXHorse_GLB_v01";
 import { Model1 } from "./CowboyXHorse_GLB_v08";
 import * as THREE from "three";
 import { PerspectiveCamera } from "three";
 import { Model11 } from "./CowboyXHorse_NLA_V11";
-import { isRemoteKicking } from "@/lib/remoke-kicks";
+import { isRemoteKicking, getSocketIdForBody, setRemoteStun } from "@/lib/remoke-kicks";
 // const PLAYER_START_POSITION: [number, number, number] = [-340, 5.5787, 410];
 
-const PLAYER_START_POSITION: [number, number, number] = [422.5, 16, -25.1];
+const PLAYER_START_POSITION: [number, number, number] = [422.5, 25, -25.1];
 
-const MAX_SPEED = 150;
+const MAX_SPEED = 160;
 const ACCELERATION = 50;
 const TURN_SPEED = 2;
 const BRAKE_FORCE = 5;
@@ -36,9 +36,9 @@ const CAMERA_DISTANCE = 14;
 const LOOK_AHEAD = 60;
 const FOLLOW_LERP = 0.1;
 const FOV_BASE = 60;
-const FOV_BOOST = 15;
+const FOV_BOOST = 5;
 const NETWORK_STATE_INTERVAL = 1 / 30;
-const START_LANE_SPACING = 5;
+const START_LANE_SPACING = 15;
 type Props = {
   playerRef: React.MutableRefObject<RapierRigidBody | null>;
 };
@@ -90,6 +90,8 @@ export function PlayerController({ playerRef }: Props) {
   // Store distance traveled for scoring
   const lastPosition = useRef(new Vector3());
   const proximityContacts = useRef<Set<string>>(new Set());
+  const collisionHitsDuringOverlay = useRef<Set<number>>(new Set());
+  const stunnedUntil = useRef<number>(0);
 
   useEffect(() => {
     playerRef.current = body.current;
@@ -112,8 +114,48 @@ export function PlayerController({ playerRef }: Props) {
     camera.lookAt(initialTarget);
   }, [camera, startTransform]);
 
+  // Listen for remote player state updates to detect when nearby remotes are kicking
+  const handleRemotePlayerState = useCallback((state: RacePlayerState) => {
+    if (!body.current) return;
+
+    // Only care if the remote has a kick overlay
+    if (!state.overlay) return;
+
+    // Check distance from local player to remote player
+    const localPos = body.current.translation();
+    const remotePos = new Vector3(state.position[0], state.position[1], state.position[2]);
+    const distance = Math.hypot(
+      localPos.x - remotePos.x,
+      localPos.y - remotePos.y,
+      localPos.z - remotePos.z
+    );
+
+    // If remote is within kick range (~10 units), stun the local player
+    const KICK_RANGE = 10;
+    if (distance < KICK_RANGE) {
+      stunnedUntil.current = performance.now() + 2000;
+      console.log(`aaaaa[LOCAL STUN] Remote player at distance ${distance.toFixed(1)} is kicking, local player stunned`);
+    }
+  }, []);
+
+  useSocketEvent("race:player-state", handleRemotePlayerState);
+
   useFrame((state, delta) => {
     if (!body.current || !isPlaying) return;
+
+    const rb = body.current;
+
+    // Check if locally stunned - if so, skip movement and return early
+    const now = performance.now();
+    const isStunned = stunnedUntil.current > now;
+    if (isStunned) {
+      const linvel = rb.linvel();
+      const pos = rb.translation();
+      // Freeze horizontal movement but keep vertical (for gravity)
+      rb.setLinvel({ x: 0, y: linvel.y, z: 0 }, true);
+      console.log(`[STUN ACTIVE] Local player stunned, freezing movement`);
+      return;
+    }
 
     const { forward, backward, left, right, jump, kickLeft, kickRight } =
       getKeys();
@@ -122,8 +164,6 @@ export function PlayerController({ playerRef }: Props) {
     const torque = { x: 0, y: 0, z: 0 };
 
     // current velocity
-    const rb = body.current;
-
     const linvel = rb.linvel();
     const velocity = new Vector3(linvel.x, linvel.y, linvel.z);
 
@@ -331,13 +371,13 @@ export function PlayerController({ playerRef }: Props) {
       const socket = getSocket();
       const pos = rb.translation();
       const rot = rb.rotation();
-      console.log("sending network state", {
-        position: [pos.x, pos.y, pos.z],
-        rotation: [rot.x, rot.y, rot.z, rot.w], velocity: [velocity.x, linvel.y, velocity.z],
-        speed: displaySpeedKmh,
-        animation: currentAnimationName.current,
-        overlay: currentOverlayName.current,
-      });
+      // console.log("sending network state", {
+      //   position: [pos.x, pos.y, pos.z],
+      //   rotation: [rot.x, rot.y, rot.z, rot.w], velocity: [velocity.x, linvel.y, velocity.z],
+      //   speed: displaySpeedKmh,
+      //   animation: currentAnimationName.current,
+      //   overlay: currentOverlayName.current,
+      // });
       if (socket.connected) {
         socket.volatile.emit("race:state", {
           position: [pos.x, pos.y, pos.z],
@@ -441,6 +481,9 @@ export function PlayerController({ playerRef }: Props) {
 
       currentOverlayAction.current = next;
       currentOverlayName.current = name;
+      // mark kick start
+      lastKickedAt.current = performance.now();
+      collisionHitsDuringOverlay.current.clear();
 
       const mixer = next.getMixer();
 
@@ -452,6 +495,9 @@ export function PlayerController({ playerRef }: Props) {
             currentOverlayAction.current = null;
             currentOverlayName.current = null;
           }
+
+          // clear hits when overlay finishes
+          collisionHitsDuringOverlay.current.clear();
 
           mixer.removeEventListener("finished", onFinish);
         }
@@ -500,6 +546,29 @@ export function PlayerController({ playerRef }: Props) {
         position={[0, 2.9, 1]}
         restitution={0}
 
+      />
+      {/* Sensor used to detect kick hits in front of the rider */}
+      <RoundCuboidCollider
+        args={[3, 5, 5, 0.2]}
+        position={[0, 5.2, 1]}
+        // sensor
+        onCollisionEnter={({ other }) => {
+          console.log("aaaaaacollision enter", other.rigidBody);
+          if (!other.rigidBody) return;
+          const otherBody = other.rigidBody as RapierRigidBody;
+          const otherHandle = otherBody.handle;
+          if (collisionHitsDuringOverlay.current.has(otherHandle)) return;
+          if (!currentOverlayName.current) return;
+          const now = performance.now();
+          if (now - lastKickedAt.current > 1500) return;
+          const targetSocketId = getSocketIdForBody(otherBody);
+          if (!targetSocketId) return;
+          const myId = socketId ?? getSocket().id;
+          if (targetSocketId === myId) return;
+          collisionHitsDuringOverlay.current.add(otherHandle);
+          console.log(`aaaaaa[kick] ${myId} hit ${targetSocketId} with ${currentOverlayName.current}`);
+          setRemoteStun(otherBody, 2000);
+        }}
       />
       {/* <RoundCuboidCollider
         args={[1.6, 2.7, 5, 0.2]}

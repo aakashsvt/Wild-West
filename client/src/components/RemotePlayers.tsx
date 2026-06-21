@@ -13,14 +13,15 @@ import {
 import { useLobbyStore } from "@/hooks/use-lobby-store";
 import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import type { PlayerInfo, RacePlayerState, Vec3Tuple } from "@shared/types/multiplayer";
+import { isRemoteStunned } from "@/lib/remoke-kicks";
 import { Model } from "./CowboyXHorse_GLB_v01";
 import { Model1 } from "./CowboyXHorse_GLB_v08";
 import { Model11 } from "./CowboyXHorse_NLA_V11";
 import { registerRemoteBody, setRemoteKicking, unregisterRemoteBody } from "@/lib/remoke-kicks";
 const PLAYER_COLORS = ["#d4a853", "#c0392b", "#2980b9", "#5a8a4a"];
-const PLAYER_START_POSITION: Vec3Tuple = [422.5, 16, -25.1];
+const PLAYER_START_POSITION: Vec3Tuple = [422.5, 25, -25.1];
 const PLAYER_START_ROTATION_Y = 2.5;
-const START_LANE_SPACING = 15;
+const START_LANE_SPACING = 5;
 const MAX_EXTRAPOLATION_SECONDS = 0.12;
 
 type RemoteRiderProps = {
@@ -70,6 +71,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
   const currentRotation = useRef(startRotation.clone());
   const targetRotation = useRef(startRotation.clone());
   const proximityContacts = useRef<Set<number>>(new Set());
+  const stunnedUntil = useRef<number>(0);
 
   const playAnimation = useCallback((name: string) => {
     if (lastAnimation.current === name) return;
@@ -248,6 +250,21 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
     if (!bodyRef.current || !hasSnapshot.current) return;
 
     const now = performance.now();
+    // Client-side stunt: consult remoke-kicks map for stun state
+    if (isRemoteStunned(bodyRef.current)) {
+      const bodyY = bodyRef.current.translation().y;
+      bodyRef.current.setLinvel({ x: 0, y: bodyRef.current.linvel().y, z: 0 }, true);
+      bodyRef.current.setTranslation(
+        {
+          x: currentPosition.current.x,
+          y: bodyY,
+          z: currentPosition.current.z,
+        },
+        true,
+      );
+      console.log(`aaaaaa[stun] ${player.socketId} is stunned, skipping extrapolation`);
+      return;
+    }
     const ageMs = now - lastReceivedAt.current;
     const extrapolationSeconds = Math.min(ageMs / 1000, MAX_EXTRAPOLATION_SECONDS);
     targetPosition.current.copy(basePosition.current).addScaledVector(
@@ -330,6 +347,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
           args={[1.4, 1.7, 2, 0.2]}
           position={[0, 7, 0]}
           restitution={0}
+
 
         />
         <RoundCuboidCollider
