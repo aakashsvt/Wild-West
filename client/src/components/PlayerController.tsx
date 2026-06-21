@@ -65,11 +65,19 @@ export function PlayerController({ playerRef }: Props) {
   const socketId = useLobbyStore((state) => state.socketId);
   const camera = useThree((state) => state.camera as PerspectiveCamera);
 
+  // Snapshot players when the game starts so that players leaving mid-race
+  // don't shift lane offsets and teleport everyone back to spawn.
+  const playersSnapshot = useRef(players);
+  useEffect(() => {
+    if (!isPlaying) playersSnapshot.current = players;
+  }, [isPlaying, players]);
+
   const startTransform = useMemo(() => {
-    const playerIndex = players.findIndex(
+    const activePlayers = playersSnapshot.current;
+    const playerIndex = activePlayers.findIndex(
       (player) => player.socketId === (socketId ?? getSocket().id),
     );
-    const laneCount = Math.max(players.length, 1);
+    const laneCount = Math.max(activePlayers.length, 1);
     const laneIndex = playerIndex >= 0 ? playerIndex : 0;
     const centerIndex = (laneCount - 1) / 2;
     const spawnEuler = new Euler(0, PLAYER_START_ROTATION_Y, 0);
@@ -84,7 +92,7 @@ export function PlayerController({ playerRef }: Props) {
       position,
       positionTuple: [position.x, position.y, position.z] as Vec3Tuple,
     };
-  }, [players, socketId]);
+  }, [socketId]);
 
   // Smooth the follow anchor and facing while keeping the offset distance fixed.
   const cameraTarget = useRef(new Vector3());

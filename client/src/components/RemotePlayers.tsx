@@ -207,12 +207,15 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
   }, [player.socketId]);
 
   useEffect(() => {
+    // Once we have live network data, ignore spawn-position recalculations
+    // triggered by other players leaving the lobby.
+    if (hasSnapshot.current) return;
+
     currentPosition.current.copy(startPosition);
     basePosition.current.copy(startPosition);
     targetPosition.current.copy(startPosition);
     currentRotation.current.copy(startRotation);
     targetRotation.current.copy(startRotation);
-
 
     bodyRef.current?.setTranslation(
       {
