@@ -12,9 +12,9 @@ import type {
   RaceResultEntry,
 } from "../shared/types/multiplayer";
 
-const MIN_PLAYERS = 2;
+const MIN_PLAYERS = 1;
 const MAX_PLAYERS = 4;
-const COUNTDOWN_SECONDS = 3;
+const COUNTDOWN_SECONDS = 1; // TEMP: shortened for faster dev iteration — revert to 3 before real testing
 
 interface StandingState {
   entry: StandingEntry;

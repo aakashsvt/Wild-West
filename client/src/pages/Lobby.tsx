@@ -36,7 +36,8 @@ export default function Lobby() {
   const { startGame } = useGameStore();
 
   useEffect(() => {
-    if (!isAuthenticated) setLocation("/");
+    // TEMP: auth bypass for local testing (remote backend has no account yet)
+    // if (!isAuthenticated) setLocation("/");
   }, [isAuthenticated]);
   const {
     players,
@@ -133,6 +134,19 @@ export default function Lobby() {
 
   const myPlayer = players.find((p) => p.socketId === mySocketId);
   const isReady = myPlayer?.isReady ?? false;
+
+  // TEMP: auto-join + auto-ready for faster dev iteration while tuning visuals — remove before real testing
+  useEffect(() => {
+    if (!isConnected || hasJoined) return;
+    getSocket().emit("lobby:join", { username: authUser?.username?.trim() || "Tester" });
+    setHasJoined(true);
+  }, [isConnected, hasJoined, authUser]);
+
+  useEffect(() => {
+    if (hasJoined && status === "waiting" && !isReady) {
+      handleReady();
+    }
+  }, [hasJoined, status, isReady]);
 
   const panelStyle: React.CSSProperties = {
     background: `${W.panelDark}e8`,

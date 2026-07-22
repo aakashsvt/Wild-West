@@ -14,9 +14,7 @@ import { useLobbyStore } from "@/hooks/use-lobby-store";
 import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import type { PlayerInfo, RacePlayerState, Vec3Tuple } from "@shared/types/multiplayer";
 import { isRemoteStunned } from "@/lib/remoke-kicks";
-import { Model } from "./CowboyXHorse_GLB_v01";
-import { Model1 } from "./CowboyXHorse_GLB_v08";
-import { Model11 } from "./CowboyXHorse_NLA_V11";
+import { Model42 } from "./CowboyXHorse_NLA_V42";
 import { registerRemoteBody, setRemoteKicking, unregisterRemoteBody } from "@/lib/remoke-kicks";
 const PLAYER_COLORS = ["#d4a853", "#c0392b", "#2980b9", "#5a8a4a"];
 const PLAYER_START_POSITION: Vec3Tuple = [422.5, 150, -25.1];
@@ -374,8 +372,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
         /> */}
 
         <group>
-          {/* <Model1 ref={horseRef} /> */}
-          <Model11 ref={horseRef} />
+          <Model42 ref={horseRef} />
           <Html position={[0, 5.2, 0]} center distanceFactor={35} style={{ pointerEvents: "none" }}>
             <div
               style={{

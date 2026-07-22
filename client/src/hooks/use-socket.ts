@@ -11,13 +11,10 @@ let _socket: AppSocket | null = null;
 
 export function getSocket(): AppSocket {
   if (!_socket) {
-    _socket = io(
-      "https://frequencies-theories-situation-event.trycloudflare.com",
-      {
-        autoConnect: false,
-        path: "/socket.io",
-      },
-    );
+    _socket = io({
+      autoConnect: false,
+      path: "/socket.io",
+    });
   }
   return _socket;
 }

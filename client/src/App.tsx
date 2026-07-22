@@ -1,6 +1,6 @@
 
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -32,6 +32,10 @@ function App() {
   const [assetsLoaded, setAssetsLoaded] = useState(false);
   const hydrateToken = useAuthStore((s) => s.hydrateToken);
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  // Stable identity — an inline arrow here would change on every App re-render,
+  // which (via LoadingScreen's useEffect deps) cancels its pending dismiss
+  // timer without rescheduling it once finishedRef has already latched true.
+  const handleAssetsLoaded = useCallback(() => setAssetsLoaded(true), []);
 
   useEffect(() => {
     hydrateToken();
@@ -70,7 +74,7 @@ function App() {
               className="fixed inset-0 z-[100]"
               exit={{ opacity: 0, transition: { duration: 0.5 } }}
             >
-              <LoadingScreen onFinished={() => setAssetsLoaded(true)} />
+              <LoadingScreen onFinished={handleAssetsLoaded} />
             </motion.div>
           )}
         </AnimatePresence>

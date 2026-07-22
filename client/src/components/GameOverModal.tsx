@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Trophy, RotateCcw } from "lucide-react";
 
 const formSchema = z.object({
   username: z.string().min(2, "Name too short").max(10, "Name too long"),
@@ -95,7 +94,6 @@ export function GameOverModal() {
                   onClick={resetGame}
                   className="flex-1 px-6 py-3 rounded-xl font-bold uppercase tracking-wider bg-zinc-800 text-white hover:bg-zinc-700 transition-colors border border-white/10 flex items-center justify-center gap-2"
                 >
-                  <RotateCcw className="w-4 h-4" />
                   Menu
                 </button>
                 <button
@@ -103,14 +101,7 @@ export function GameOverModal() {
                   disabled={isPending}
                   className="flex-[2] px-6 py-3 rounded-xl font-bold uppercase tracking-wider bg-gradient-to-r from-primary to-pink-600 text-white hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {isPending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Trophy className="w-4 h-4" />
-                      Submit Record
-                    </>
-                  )}
+                  {isPending ? "Submitting..." : "Submit Record"}
                 </button>
               </div>
             </form>

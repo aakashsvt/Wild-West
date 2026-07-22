@@ -39,3 +39,4 @@ export default defineConfig({
     exclude: ["@react-three/rapier"],
   },
 });
+

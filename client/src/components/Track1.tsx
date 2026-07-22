@@ -7,9 +7,10 @@ import { useGLTF } from '@react-three/drei'
 import { Group } from 'three'
 import { RigidBody, CuboidCollider } from "@react-three/rapier";
 import { useFrame, useThree } from '@react-three/fiber'
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import trackPoints from '../../public/models/spline.json'
+import { withKTX2 } from '../lib/ktx2-loader'
 const points = trackPoints.map(
   (p) => new THREE.Vector3(p.x, p.y, p.z)
 );
@@ -17,6 +18,65 @@ const TRACK_OFFSET = 410
 const offsetz = 20
 interface ModelProps {
   [key: string]: any
+}
+
+// The exported terrain mesh ships two morph targets ("Key 1"/"Key 2", a
+// Blender sculpt layer) baked at weight 1 instead of applied to the base
+// mesh on export. Three.js blends morph targets on the GPU — it never
+// touches geometry.attributes.position — but @react-three/rapier's
+// automatic trimesh collider is generated straight from that unmorphed
+// base attribute. Result: the rendered ground and the physics ground
+// disagree everywhere the sculpt layer moved the surface, which reads as
+// the rider floating above (or sinking into) terrain in exactly those
+// spots. Baking the morph delta into the position/normal attributes once,
+// up front, makes the geometry Rapier reads match what's on screen.
+function bakeMorphTargets(geometry: THREE.BufferGeometry, weights: number[]) {
+  const morphPositions = geometry.morphAttributes.position;
+  if (!morphPositions || morphPositions.length === 0) return geometry;
+
+  const baked = geometry.clone();
+  const posAttr = baked.attributes.position as THREE.BufferAttribute;
+  const normalAttr = baked.attributes.normal as THREE.BufferAttribute | undefined;
+  const morphNormals = geometry.morphAttributes.normal;
+
+  for (let i = 0; i < posAttr.count; i++) {
+    let x = posAttr.getX(i);
+    let y = posAttr.getY(i);
+    let z = posAttr.getZ(i);
+    for (let t = 0; t < morphPositions.length; t++) {
+      const w = weights[t] ?? 0;
+      if (!w) continue;
+      const target = morphPositions[t];
+      x += target.getX(i) * w;
+      y += target.getY(i) * w;
+      z += target.getZ(i) * w;
+    }
+    posAttr.setXYZ(i, x, y, z);
+  }
+  posAttr.needsUpdate = true;
+
+  if (normalAttr && morphNormals) {
+    for (let i = 0; i < normalAttr.count; i++) {
+      let x = normalAttr.getX(i);
+      let y = normalAttr.getY(i);
+      let z = normalAttr.getZ(i);
+      for (let t = 0; t < morphNormals.length; t++) {
+        const w = weights[t] ?? 0;
+        if (!w) continue;
+        const target = morphNormals[t];
+        x += target.getX(i) * w;
+        y += target.getY(i) * w;
+        z += target.getZ(i) * w;
+      }
+      const len = Math.hypot(x, y, z) || 1;
+      normalAttr.setXYZ(i, x / len, y / len, z / len);
+    }
+    normalAttr.needsUpdate = true;
+  }
+
+  baked.morphAttributes = {};
+  baked.morphTargetsRelative = false;
+  return baked;
 }
 
 
@@ -72,6 +132,24 @@ function Walls() {
     </>
   );
 }
+// Brightness (a plain RGB multiplier) can't be tuned independently of perceived
+// saturation — a brighter version of the same saturated color reads as more
+// vivid even though its raw hue/saturation ratio hasn't changed (the "Hunt
+// effect"). Desaturating the source texture once, up front, decouples the two
+// so brightness can be pushed without the sky looking oversaturated.
+//
+// This mesh is toneMapped={false}, so a flat "color" multiplier on the GPU
+// side has no highlight rolloff at all — bright pixels (near the sun/clouds)
+// hard-clip to solid white once multiplied. Baking a Reinhard-style curve
+// (L_out = L_in*brightness / (1 + L_in*brightness*knee)) into the texture
+// itself instead brightens the darker sky/midtones while asymptotically
+// capping the brightest pixels instead of clipping them.
+// The saturate(0.6)/brightness(4)/knee(0.5) tone-curve fix this used to
+// apply at runtime via Canvas2D is now baked directly into the sky texture
+// asset at build time instead (see wildwest_sky_texture_ktx2_migration
+// memory) — KTX2/Basis-compressed textures have no CPU-side pixel data,
+// so `ctx.drawImage()` on one throws. Using material.emissiveMap directly
+// now that the brightening is already baked in.
 function Sky({ geometry, material }: any) {
   const ref = useRef<THREE.Mesh>(null!)
   const { camera } = useThree()
@@ -87,17 +165,27 @@ function Sky({ geometry, material }: any) {
       <meshBasicMaterial
         map={material.emissiveMap}
         side={2}
-        color={[3, 3, 3]}
+        color={[1, 1, 1]}
         toneMapped={false}
         depthWrite={false}
-
+        fog={false}
       />
     </mesh>
   )
 }
 
 export function Model(props: ModelProps) {
-  const { nodes, materials } = useGLTF('/models/RoadTest.glb') as any
+  const { nodes, materials } = useGLTF('/models/RoadTest.glb', true, true, withKTX2) as any
+
+  const landscapeGeometry = useMemo(
+    () =>
+      bakeMorphTargets(
+        nodes.Landscape_Combined_Compressed.geometry,
+        nodes.Landscape_Combined_Compressed.morphTargetInfluences ?? [1, 1],
+      ),
+    [nodes],
+  );
+
   return (<>
 
     <group {...props} dispose={null}>
@@ -109,18 +197,29 @@ export function Model(props: ModelProps) {
 
 
 
-        <mesh geometry={nodes.TrackCliffs_Baked_Combined_Compressed.geometry} material={materials.TrackCliffs_Baked_Combined_Compressed} position={[617.033, -5.551, 182.431]} />
-        <mesh geometry={nodes.LargeCliffs_Break_WithLighting_Combined_Compressed.geometry} material={materials.LargeCliffs_Break_WithLighting_Combined_Compressed} />
+        <mesh castShadow receiveShadow geometry={nodes.TrackCliffs_Baked_Combined_Compressed.geometry} material={materials.TrackCliffs_Baked_Combined_Compressed} position={[617.033, -5.551, 182.431]} />
+        <mesh castShadow receiveShadow geometry={nodes.LargeCliffs_Break_WithLighting_Combined_Compressed.geometry} material={materials.LargeCliffs_Break_WithLighting_Combined_Compressed} />
 
-        <mesh geometry={nodes.Cactus_Scattering_Combined_Compressed.geometry} material={materials.Cactus_Scattering_Combined_Compressed} />
+        <mesh castShadow receiveShadow geometry={nodes.Cactus_Scattering_Combined_Compressed.geometry} material={materials.Cactus_Scattering_Combined_Compressed} />
 
-        <mesh name="Landscape_Combined_Compressed" geometry={nodes.Landscape_Combined_Compressed.geometry} material={materials.Landscape_Combined_Compressed} morphTargetDictionary={nodes.Landscape_Combined_Compressed.morphTargetDictionary} morphTargetInfluences={nodes.Landscape_Combined_Compressed.morphTargetInfluences} />
+        <mesh castShadow receiveShadow name="Landscape_Combined_Compressed" geometry={landscapeGeometry} material={materials.Landscape_Combined_Compressed} />
 
+        {/* These four were previously rendered outside this RigidBody, so
+            Rapier never generated colliders for them at all. Despite the
+            "Scatter" name they're huge terrain-scale meshes (17K-157K verts,
+            bounding boxes tiling the whole map) that visually form part of
+            the ground in various spots — with no collider, the physics body
+            rested on whatever base terrain sat beneath them instead, reading
+            as the horse gliding above the visible surface in exactly those
+            areas. No morph targets on these (confirmed against the source
+            GLB), so unlike Landscape_Combined_Compressed above they don't
+            need bakeMorphTargets — moving them inside colliders="trimesh"
+            is enough. */}
+        <mesh castShadow receiveShadow geometry={nodes.LandscapeScatter_1_Combined_Compressed.geometry} material={materials.LandscapeScatter_1_Combined_Compressed} />
+        <mesh castShadow receiveShadow geometry={nodes.LandscapeScatter_2_Combined_Compressed.geometry} material={materials.LandscapeScatter_2_Combined_Compressed} />
+        <mesh castShadow receiveShadow geometry={nodes.LandscapeScatter_3_Combined_Compressed.geometry} material={materials.LandscapeScatter_3_Combined_Compressed} />
+        <mesh castShadow receiveShadow geometry={nodes.LandscapeScatter_4_Combined_Compressed.geometry} material={materials.LandscapeScatter_4_Combined_Compressed} />
       </RigidBody>
-      <mesh geometry={nodes.LandscapeScatter_1_Combined_Compressed.geometry} material={materials.LandscapeScatter_1_Combined_Compressed} />
-      <mesh geometry={nodes.LandscapeScatter_2_Combined_Compressed.geometry} material={materials.LandscapeScatter_2_Combined_Compressed} />
-      <mesh geometry={nodes.LandscapeScatter_3_Combined_Compressed.geometry} material={materials.LandscapeScatter_3_Combined_Compressed} />
-      <mesh geometry={nodes.LandscapeScatter_4_Combined_Compressed.geometry} material={materials.LandscapeScatter_4_Combined_Compressed} />
     </group>
 
     <Walls />
@@ -128,4 +227,4 @@ export function Model(props: ModelProps) {
   )
 }
 
-useGLTF.preload('/models/RoadTest.glb')
+useGLTF.preload('/models/RoadTest.glb', true, true, withKTX2)

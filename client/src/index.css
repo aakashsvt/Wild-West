@@ -7,6 +7,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* stats.js sets its own inline position:fixed;left:0 — override with
+   !important so the second (memory) panel sits beside the FPS one
+   instead of stacking on top of it. */
+.mem-stats {
+  left: 80px !important;
+}
+
 :root {
   /* Neon Arcade Palette */
   --background: 240 20% 10%;

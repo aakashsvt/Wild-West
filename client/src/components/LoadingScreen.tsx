@@ -48,8 +48,12 @@ export function LoadingScreen({ onFinished }: LoadingScreenProps) {
     const elapsed = Date.now() - mountTimeRef.current;
     const remaining = Math.max(0, LOADING_CONFIG.minDisplayMs - elapsed);
 
-    const t = setTimeout(onFinished, remaining);
-    return () => clearTimeout(t);
+    // No cleanup return here on purpose: useProgress can fire several updates
+    // that are all "100" (multiple loaders finishing near-simultaneously), each
+    // re-running this effect. If this timer were cancelled by the next re-run's
+    // cleanup, the finishedRef guard above would then block it from ever being
+    // rescheduled — leaving the screen stuck at 100% forever.
+    setTimeout(onFinished, remaining);
   }, [progress, onFinished]);
 
   return (

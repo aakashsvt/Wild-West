@@ -1,16 +1,17 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import * as THREE from "three";
-import { KeyboardControls, Environment, OrbitControls, Stars } from "@react-three/drei";
+import { KeyboardControls, Environment, OrbitControls, Stars, Stats } from "@react-three/drei";
 import { Suspense, useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import type { RapierRigidBody } from "@react-three/rapier"
 import { PlayerController } from "@/components/PlayerController";
 import { RemotePlayers } from "@/components/RemotePlayers";
-import { Track } from "@/components/Track";
+import { SunLight } from "@/components/SunLight";
 import { Model } from "@/components/Track1";
 import { GameHUD } from "@/components/GameHUD";
+import { TouchControls } from "@/components/TouchControls";
 import { GameOverModal } from "@/components/GameOverModal";
 import { useGameStore } from "@/hooks/use-game-store";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
@@ -21,6 +22,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 
 // ── Western palette — matches Home and LoadingScreen ─────────────────────────
 const W = {
@@ -67,11 +69,12 @@ function GameTransitionOverlay({
   const [step, setStep] = useState<number | "GO">(3);
   useEffect(() => {
     if (phase !== "countdown") return;
+    // TEMP: shortened for faster dev iteration — revert to 1000/2000/3000/3600 before real testing
     const timers = [
-      setTimeout(() => setStep(2), 1000),
-      setTimeout(() => setStep(1), 2000),
-      setTimeout(() => setStep("GO"), 3000),
-      setTimeout(onDone, 3600),
+      setTimeout(() => setStep(2), 150),
+      setTimeout(() => setStep(1), 300),
+      setTimeout(() => setStep("GO"), 450),
+      setTimeout(onDone, 600),
     ];
     return () => timers.forEach(clearTimeout);
   }, [phase, onDone]);
@@ -182,6 +185,83 @@ function GameTransitionOverlay({
   );
 }
 
+// ── HeatHazeShader ────────────────────────────────────────────────────────────
+// From gamedemo_vfx_ideas_backlog's parked "heat haze/mirage" idea, added to
+// wild-west instead. Two failed-then-fixed attempts at "not a cheap glitch":
+//  1. A naive full-screen sine-wave UV distortion reads as a "wavy TV" glitch
+//     (the exact risk flagged in that backlog note).
+//  2. A first fix masked it to a horizon band and drove distortion off
+//     screen-Y with two overlapping sine frequencies — better, but low-order
+//     sine waves at that scale are too smooth/coherent: whole horizontal
+//     scanlines shift together in a regular, correlated ripple, which reads
+//     as a swirly "melting/hallucinating" effect rather than heat shimmer.
+// Fixed by swapping the sine wobble for actual 2D value noise (fine-grained,
+// varies with both X and Y so it doesn't look like sliding horizontal bands)
+// at small amplitude and fast time evolution — closer to the fine, jittery
+// shimmer real heat distortion has, rather than a big smooth wave. Distortion
+// is still masked to a horizon band only (fades to 0 in the sky and near the
+// close-up ground right under the horse) — real heat shimmer is a
+// distant-horizon phenomenon, not a full-screen effect.
+const HeatHazeShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    time: { value: 0 },
+  },
+
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+
+  fragmentShader: `
+uniform sampler2D tDiffuse;
+uniform float time;
+varying vec2 vUv;
+
+float hash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+float valueNoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  float a = hash(i);
+  float b = hash(i + vec2(1.0, 0.0));
+  float c = hash(i + vec2(0.0, 1.0));
+  float d = hash(i + vec2(1.0, 1.0));
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+void main() {
+  vec2 uv = vUv;
+
+  // Narrow soft band centered on the horizon — 0 in the sky, 0 right under
+  // the horse, peaks in the distant-ground/horizon zone in between.
+  float horizonY = 0.5;
+  float bandWidth = 0.16;
+  float mask = 1.0 - smoothstep(0.0, bandWidth, abs(uv.y - horizonY));
+
+  // Fine-grained noise sampled at two scales/speeds and blended, so it
+  // doesn't repeat in an obviously periodic way. Aspect-corrected x so the
+  // noise cells read as roughly square instead of screen-stretched.
+  vec2 noiseUv = vec2(uv.x * 2.2, uv.y * 5.0);
+  float n1 = valueNoise(noiseUv * 3.0 + vec2(time * 1.6, time * 0.6));
+  float n2 = valueNoise(noiseUv * 7.0 - vec2(time * 2.3, time * 1.1));
+  float wobble = (n1 * 0.6 + n2 * 0.4) * 2.0 - 1.0; // remap [0,1] -> [-1,1]
+
+  // Mostly horizontal displacement (real heat shimmer is dominated by
+  // sideways light-bending through horizontal air layers), tiny vertical
+  // component so it doesn't look like a perfectly axis-locked slide.
+  vec2 offset = vec2(wobble * 0.0009, wobble * 0.00015) * mask;
+  gl_FragColor = texture2D(tDiffuse, uv + offset);
+}
+`,
+};
+
 // ── MotionBlurShader ──────────────────────────────────────────────────────────
 const MotionBlurShader = {
   uniforms: {
@@ -230,26 +310,114 @@ void main() {
 `
 }
 
-type Props = {
-  speedRef: React.MutableRefObject<number>
-  playerRef: React.MutableRefObject<RapierRigidBody | null>
+// Color grading — values below are the final look, hand-picked live via a
+// Leva tuning panel (see wildwest_color_grading_panel_plan memory) and then
+// baked in here as the new defaults.
+const ColorGradeShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    brightness: { value: 0.93 },
+    saturation: { value: 0.96 },
+    contrast: { value: 1.02 },
+    gamma: { value: 0.92 },
+    temperature: { value: 0.0 },
+    tint: { value: 0.0 },
+    vignette: { value: 1.0 },
+  },
+
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+
+  fragmentShader: `
+uniform sampler2D tDiffuse;
+uniform float brightness;
+uniform float saturation;
+uniform float contrast;
+uniform float gamma;
+uniform float temperature;
+uniform float tint;
+uniform float vignette;
+varying vec2 vUv;
+
+void main() {
+  vec4 color = texture2D(tDiffuse, vUv);
+
+  color.rgb *= brightness;
+
+  // contrast pivots around mid-gray so 1.0 stays a no-op
+  color.rgb = (color.rgb - 0.5) * contrast + 0.5;
+
+  // midtone power curve — distinct from contrast/brightness, standard
+  // "gamma" grading knob. max() guards pow() against negative input.
+  color.rgb = pow(max(color.rgb, 0.0), vec3(1.0 / gamma));
+
+  // temperature: warm (+) boosts red/cuts blue, cool (-) the reverse
+  color.rgb += vec3(temperature * 0.15, 0.0, -temperature * 0.15);
+  // tint: magenta (+) boosts red+blue/cuts green, green (-) the reverse
+  color.rgb += vec3(tint * 0.1, -tint * 0.15, tint * 0.1);
+
+  // luminance-based saturation mix — same Rec.709 weights the rest of the
+  // codebase's saturate() work uses (see Track1.tsx's sky bake)
+  float luma = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
+  color.rgb = mix(vec3(luma), color.rgb, saturation);
+
+  // vignette: darken toward screen edges, 0 = no effect
+  float dist = distance(vUv, vec2(0.5));
+  float vig = 1.0 - smoothstep(0.35, 0.9, dist) * vignette;
+  color.rgb *= vig;
+
+  gl_FragColor = color;
+}
+`
 }
 
-export function MotionBlurEffect({ speedRef, playerRef }: Props) {
+type Props = {
+  playerRef: React.MutableRefObject<RapierRigidBody | null>
+  isFirstPersonRef: React.MutableRefObject<boolean>
+}
+
+export function MotionBlurEffect({ playerRef, isFirstPersonRef }: Props) {
   const { gl, scene, camera, size } = useThree()
 
   const composer = useRef<EffectComposer | null>(null)
   const blurPass = useRef<ShaderPass | null>(null)
+  const heatHazePass = useRef<ShaderPass | null>(null)
   const tempVec = useRef(new THREE.Vector3())
 
   useEffect(() => {
     const renderPass = new RenderPass(scene, camera)
+    // Heat haze runs right after the base render and before bloom, so bloom
+    // picks up the already-distorted image — light bending through hot air
+    // happens before it reaches the "lens", so this ordering is the more
+    // physically coherent one (and avoids dragging bloom highlights sideways
+    // in a rubbery way, which distorting an already-bloomed image would do).
+    const heatPass = new ShaderPass(HeatHazeShader)
+    // Tuned live via the Leva panel (see wildwest_color_grading_panel_plan
+    // memory) and baked in as the new defaults.
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(size.width, size.height),
+      0.15,
+      0.65,
+      0.47,
+    )
     const shaderPass = new ShaderPass(MotionBlurShader)
+    // Grading runs after bloom/motion-blur so it grades the final composited
+    // image rather than perturbing bloom's own light-additive math, and
+    // right before the output pass that handles final color-space conversion.
+    const gradePass = new ShaderPass(ColorGradeShader)
     const outputPass = new OutputPass()
 
     const comp = new EffectComposer(gl)
     comp.addPass(renderPass)
+    comp.addPass(heatPass)
+    comp.addPass(bloomPass)
     comp.addPass(shaderPass)
+    comp.addPass(gradePass)
 
     // ✅ THIS FIXES COLOR
     comp.addPass(outputPass)
@@ -258,20 +426,22 @@ export function MotionBlurEffect({ speedRef, playerRef }: Props) {
 
     composer.current = comp
     blurPass.current = shaderPass
+    heatHazePass.current = heatPass
 
     gl.autoClear = false
 
     return () => comp.dispose()
   }, [gl, scene, camera, size])
 
-  useFrame(() => {
+  useFrame((state) => {
     const comp = composer.current
     const blur = blurPass.current
+    const heat = heatHazePass.current
     const body = playerRef.current
 
-    if (!comp || !blur || !body) return
+    if (heat) heat.uniforms.time.value = state.clock.elapsedTime
 
-    const speed = speedRef.current || 0
+    if (!comp || !blur || !body) return
 
     // 🚀 get REAL velocity (not projected position)
     const vel = body.linvel()
@@ -286,12 +456,38 @@ export function MotionBlurEffect({ speedRef, playerRef }: Props) {
 
     blur.uniforms.direction.value.set(dirX, dirY)
 
-    // 🎯 Asphalt-style intensity curve
-    const intensity = THREE.MathUtils.clamp(
-      Math.pow(speed, 1) * 0.01,
-      0.0,
+    // Intensity gated to the RUN range only — it used to ramp off the
+    // store's display speed (raw velocity * 1.5), which is already ~9-22 at
+    // a normal walk, so the shader's edge samples were visibly blurring
+    // during walk. RUN_BLUR_START matches the RUN animation's own threshold
+    // (PlayerController.tsx, currentSpeed > 15) and RUN_BLUR_MAX matches the
+    // observed near-full-gallop speed used for the FP FOV curve
+    // (FP_FOV_RUN_MAX_SPEED) — so blur is 0 at idle/walk and ramps in only
+    // once actually running.
+    const rawSpeed = Math.hypot(vel.x, vel.z)
+    const RUN_BLUR_START = 15
+    const RUN_BLUR_MAX = 45
+    let intensity = THREE.MathUtils.clamp(
+      (rawSpeed - RUN_BLUR_START) / (RUN_BLUR_MAX - RUN_BLUR_START),
+      0,
       1
     )
+
+    // This shader averages 20 *discrete* radial samples rather than a true
+    // continuous blur — fine at third-person scale, but in first-person the
+    // horse's head/neck is a large, high-contrast dark silhouette sitting
+    // right in the blurred screen-edge region, and at the wider FP FOV the
+    // same pixel-space sample spacing covers more visually "busy" content.
+    // That combination makes the discrete samples visible as separated
+    // ghost layers instead of blending smoothly — reported as looking like
+    // "3D without glasses" / color layers. Confirmed via an A/B test against
+    // GameDemo (which has no motion blur pass at all and doesn't show the
+    // issue in first-person) that motion blur is the actual cause, not
+    // bloom (both builds have bloom). A 20% cut still showed the artifact,
+    // so first-person disables blur entirely instead, matching GameDemo.
+    if (isFirstPersonRef.current) {
+      intensity = 0
+    }
 
     blur.uniforms.strength.value = intensity
 
@@ -302,15 +498,38 @@ export function MotionBlurEffect({ speedRef, playerRef }: Props) {
   return null
 }
 
+// Fog — finalized via a live Leva panel (see wildwest_fog_slider_panel_plan
+// memory), now baked in as a plain constant.
+//
+// FOG1 (original, preserved for reference/rollback): near 400 / far 2200 /
+// color #dcdeea — see wildwest_fog_implemented memory (color pixel-sampled
+// from this scene's horizon-haze band, near/far widened from an initial
+// 80/900 guess that fogged things too close).
+//
+// Current (final): far pulled in from 2200 to 1350, tighter/closer fog
+// falloff. near/color unchanged from FOG1.
+function FogController() {
+  const { scene } = useThree()
+
+  useEffect(() => {
+    scene.fog = new THREE.Fog(new THREE.Color('#dcdeea'), 400, 1350)
+    return () => {
+      scene.fog = null
+    }
+  }, [scene])
+
+  return null
+}
+
 // ── Game ──────────────────────────────────────────────────────────────────────
 type GamePhase = "loading" | "countdown" | "done";
 
 export default function Game() {
   const { resetGame } = useGameStore();
   const playerRef = useRef<RapierRigidBody | null>(null)
-  const speedRef = useRef(0)
+  const isFirstPersonRef = useRef(false)
 
-  const { speed, score, timeElapsed, isPlaying, isGameOver } = useGameStore()
+  const { score, timeElapsed, isPlaying, isGameOver } = useGameStore()
   const { roomId, setLobbyState, setStandings, setRaceResults, resetLobby } = useLobbyStore()
 
   if (!roomId) return <Redirect to="/lobby" />;
@@ -323,10 +542,6 @@ export default function Game() {
       resetLobby();
     };
   }, [resetLobby]);
-
-  useEffect(() => {
-    speedRef.current = speed
-  }, [speed])
 
   // Overlay phase — drives visual only, no effect on game logic
   const [phase, setPhase] = useState<GamePhase>("loading");
@@ -361,12 +576,17 @@ export default function Game() {
     { name: "jump", keys: ["Space"] },
     { name: "kickLeft", keys: ["KeyQ"] },
     { name: "kickRight", keys: ["KeyE"] },
+    { name: "toggleView", keys: ["KeyV"] },
+    { name: "run", keys: ["ShiftLeft", "ShiftRight"] },
+    { name: "boost", keys: ["KeyX"] },
+    { name: "toggleLookPitch", keys: ["KeyL"] },
   ], []);
 
   return (
     <div className="w-full h-screen bg-[#0a0603] overflow-hidden relative">
       <GameHUD />
       <GameOverModal />
+      <TouchControls />
 
       <div className="absolute bottom-5 left-5 z-10">
         <Link
@@ -392,15 +612,22 @@ export default function Game() {
           outputColorSpace: THREE.SRGBColorSpace,
           toneMappingExposure: 1
         }}>
+          <Stats />
+          {/* Second stats.js panel pinned to the MB (JS heap) readout, so
+              RAM is always visible instead of only reachable by clicking
+              to cycle the panel above. */}
+          <Stats showPanel={2} className="mem-stats" />
+          <FogController />
           <Suspense fallback={null}>
             <Environment files="/models/Cannon_Exterior.hdr" background={true} blur={0} />
             <Physics gravity={[0, -300, 0]} debug={false}>
-              <PlayerController playerRef={playerRef} />
+              <SunLight playerRef={playerRef} />
+              <PlayerController playerRef={playerRef} isFirstPersonRef={isFirstPersonRef} />
               <RemotePlayers />
               <Model />
               <SceneReadyProbe onReady={handleSceneReady} />
             </Physics>
-            <MotionBlurEffect speedRef={speedRef} playerRef={playerRef} />
+            <MotionBlurEffect playerRef={playerRef} isFirstPersonRef={isFirstPersonRef} />
           </Suspense>
         </Canvas>
       </KeyboardControls>

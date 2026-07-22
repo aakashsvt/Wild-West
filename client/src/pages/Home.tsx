@@ -61,7 +61,7 @@ export default function Home() {
   const openSignUp = () => { setAuthTab("signup"); setAuthOpen(true); };
 
   const handleStart = () => {
-    if (!isAuthenticated) { openSignIn(); return; }
+    // TEMP: auth bypass for local testing (remote backend has no account yet)
     setLocation("/lobby");
   };
 
