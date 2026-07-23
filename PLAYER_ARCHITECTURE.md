@@ -51,3 +51,13 @@ Inside `PlayerController.tsx`, an event listener waits for `"hazard-impact"`:
    - Instantly sets the player's physical `RigidBody` velocity to **0** for a hard stop.
 
 When `stunState` is anything other than `"NONE"`, `usePlayerMovement` completely ignores all user keyboard inputs, locking their controls until the stun timer expires.
+
+---
+
+## 5. AAA Camera Shake Integration
+To provide a production-level "Game Feel" during impacts, the camera features a decoupled, frame-rate independent screen shake system.
+
+- **Implementation**: `usePlayerCamera.ts` exports a `triggerShake(intensity, duration)` function.
+- **Math**: Rather than relying on simple random numbers, the shake calculates 5 distinct high-frequency sine and cosine waves (driven by `performance.now()` to ensure independence from frame-time deltas).
+- **Effect**: It offsets the camera's `X` and `Y` position while simultaneously adding violent noise to the `Pitch`, `Yaw`, and `Roll` (`Z` rotation) of the camera, simulating a realistic head-trauma impact.
+- **Triggering**: The shake can be called dynamically from `PlayerController` during hazard collisions or via the debug Leva UI.

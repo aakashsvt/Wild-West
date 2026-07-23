@@ -39,6 +39,7 @@ import { usePlayerMovement } from './usePlayerMovement';
 import { usePlayerCamera } from './usePlayerCamera';
 import { usePlayerAnimations } from './usePlayerAnimations';
 import { usePlayerNetwork } from './usePlayerNetwork';
+import { useControls, button } from "leva";
 import { usePlayerStateMachine } from './usePlayerStateMachine';
 type Props = {
   playerRef: React.MutableRefObject<RapierRigidBody | null>;
@@ -197,7 +198,17 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
 
 
   const { updateMovement } = usePlayerMovement(setSpeed, addScore);
-  const { updateCamera } = usePlayerCamera(camera);
+  const { updateCamera, triggerShake } = usePlayerCamera(camera);
+
+  useControls("AAA Camera Shake", {
+    intensity: { value: 1.5, min: 0.1, max: 5.0, step: 0.1 },
+    duration: { value: 0.5, min: 0.1, max: 2.0, step: 0.1 },
+    "Trigger Custom Shake": button((get) => {
+      triggerShake(get("AAA Camera Shake.intensity"), get("AAA Camera Shake.duration"));
+    }),
+    "Minor Impact": button(() => triggerShake(0.8, 0.3)),
+    "Major Impact": button(() => triggerShake(2.5, 0.7)),
+  });
   const { updateNetwork } = usePlayerNetwork();
   const { playAnimation, currentAnimationName, currentOverlayName, collisionHitsDuringOverlay, lastKickedAt } = usePlayerAnimations(horseRef);
   const { updateStateMachine, transitioningToRun, walk2RunStartedAt } = usePlayerStateMachine(playAnimation);
