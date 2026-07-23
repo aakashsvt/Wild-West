@@ -6,7 +6,7 @@ import { Suspense, useMemo, useRef, useEffect, useState, useCallback } from "rea
 import { AnimatePresence, motion } from "framer-motion";
 
 import type { RapierRigidBody } from "@react-three/rapier"
-import { PlayerController } from "@/components/PlayerController";
+import { PlayerController } from "@/components/player/PlayerController";
 import { RemotePlayers } from "@/components/RemotePlayers";
 import { SunLight } from "@/components/SunLight";
 import { Model } from "@/components/Track1";
