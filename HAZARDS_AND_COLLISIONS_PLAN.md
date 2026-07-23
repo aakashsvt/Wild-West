@@ -3,21 +3,39 @@
 ## Overview
 The goal of this task is to implement physics-accurate impact responses when the player crashes into hazards (e.g., jump hurdles, fences, or animals). Rather than overhauling the core movement system, we will use a high-visual-impact, low-risk approach utilizing Rapier physics, screen shake, and the existing stun state machine.
 
+## Collision Behaviors
+
+Based on the severity of the impact, the horse will exhibit one of two behaviors:
+
+### 1. Minor Collision (The "Stumble")
+- **Trigger**: The horse is moving at a slow speed (walking/trotting) and hits an obstacle, or clips a small obstacle/side-collision at higher speeds.
+- **Behavior**:
+  - **Animation**: Play the **Stumble** animation.
+  - **Physics/Movement**: Temporarily reduce the horse's speed by 30% to 50%. The momentum is interrupted but not stopped completely.
+  - **Recovery**: Blend back into normal movement (walk/trot/gallop) and recover speed after the animation finishes.
+
+### 2. Major Collision (The "Fall")
+- **Trigger**: The horse is moving at a high speed (cantering/galloping) and hits a large, solid obstacle dead-on.
+- **Behavior**:
+  - **Animation**: Play the **Fall** animation.
+  - **Physics/Movement**: The horse's forward velocity drops to zero instantly. (If applicable, the rider is dismounted or thrown).
+  - **Recovery**: Play a **"Get Up"** animation to transition back to an idle state before controls are unlocked.
+
 ## Implementation Plan
 
 ### 1. Create the Hazard Component (`client/src/components/Hazard.tsx`)
 We will create a standalone component that can be placed anywhere in the 3D world.
 - **Physics**: Wrap the 3D model in a `<RigidBody type="fixed">` so it cannot be moved by the player but still registers physical impacts.
-- **Collision Detection**: Add a `<CuboidCollider>` with an `onCollisionEnter` event listener.
-- **The Bounce**: When the collider detects an object named `"player"`, it will grab the player's rigid body and apply a massive backwards physical impulse (`playerRb.applyImpulse({ x: 0, y: 5, z: -50 }, true)`).
-- **The Signal**: Dispatch a global JavaScript event (`window.dispatchEvent(new CustomEvent("hazard-impact"))`) to notify the rest of the game.
+- **Collision Detection**: Add a `<CuboidCollider>` with an `onCollisionEnter` event listener. Calculate the impact severity (based on player velocity) during the collision.
+- **The Bounce**: When the collider detects an object named `"player"`, apply a backwards physical impulse to the player based on the collision severity.
+- **The Signal**: Dispatch a global JavaScript event (`window.dispatchEvent(new CustomEvent("hazard-impact", { detail: { severity: "minor" | "major" } }))`) to notify the rest of the game.
 
 ### 2. Update `PlayerController.tsx`
 We will hook into the existing "stun" logic (currently used for multiplayer kicks) to handle the hazard impact gracefully.
-- **Event Listener**: Add a `useEffect` to listen for `"hazard-impact"`.
-- **Lock Controls**: When the event fires, set `stunnedUntil.current = performance.now() + 2000` to lock the player's controls for 2 seconds.
-- **Camera Shake**: Introduce a `cameraShakeTime` ref. On impact, set it to `0.5` seconds. Inside the `useFrame` camera logic, apply randomized `x` and `y` noise to the camera position while the shake timer is active.
-- **Animation Blending**: Inside the `useFrame` stun check, change the fallback animation from `"IDLE"` to the designated impact/stumble animation from the `CowboyXHorse_NLA_V42` model.
+- **Event Listener**: Add a `useEffect` to listen for `"hazard-impact"` and read the `severity` from the event detail.
+- **Lock Controls**: When the event fires, set `stunnedUntil.current` based on severity (e.g., 1000ms for stumble, 3000ms for fall) to lock the player's controls.
+- **Camera Shake**: Introduce a `cameraShakeTime` ref. On impact, set it to `0.5` seconds (longer for major collisions). Inside the `useFrame` camera logic, apply randomized `x` and `y` noise to the camera position while the shake timer is active.
+- **Animation Blending**: Inside the `useFrame` stun check, change the fallback animation from `"IDLE"` to the designated **Stumble** or **Fall** animation from the `CowboyXHorse_NLA_V42` model based on the impact severity.
 
 ## Why this approach?
 - **High Visual Impact**: The combination of a physical bounce, a locked animation state, and violent camera shake feels incredibly polished to players and clients.
