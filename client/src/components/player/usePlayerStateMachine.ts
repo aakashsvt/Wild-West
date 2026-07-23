@@ -1,4 +1,4 @@
-import { useRef, MutableRefObject } from "react";
+import { useRef } from "react";
 import { WALK2RUN_DURATION_MS, WALK2RUN_ENTER_FADE } from "./constants";
 
 export type PlayerInputs = {
@@ -13,6 +13,30 @@ export type PlayerInputs = {
   isBoosting: boolean;
 };
 
+// Define all valid base states corresponding to GLTF animation names
+export enum PlayerState {
+  IDLE = "IDLE",
+  WALK = "WALK",
+  RUN = "RUN",
+  RUN_LEFT = "RUN_LEFT",
+  RUN_RIGHT = "RUN_RIGHT",
+  RUN_BOOST = "RUN_BOOST",
+  WALK2RUN = "WALK2RUN",
+  TURN_LEFT = "TURN_LEFT",
+  TURN_RIGHT = "TURN_RIGHT",
+  JUMP = "JUMP",
+  // HAZARDS:
+  STUMBLE = "STUMBLE",
+  FALL = "FALL",
+}
+
+// Define all valid overlay states (kicks, etc.)
+export enum PlayerOverlayState {
+  RUN_KICK_LEFT = "RUN_KICK_LEFT",
+  RUN_KICK_RIGHT = "RUN_KICK_RIGHT",
+  NONE = "NONE"
+}
+
 export function usePlayerStateMachine(
   playAnimation: (name: string, type?: "base" | "overlay", fadeDuration?: number) => void
 ) {
@@ -22,7 +46,7 @@ export function usePlayerStateMachine(
   const updateStateMachine = (
     now: number,
     inputs: PlayerInputs,
-    isStunned: boolean,
+    stunState: "NONE" | "FALL" | "STUMBLE" | "KICKED",
     currentSpeed: number,
     currentAnimationName: string
   ) => {
@@ -38,56 +62,74 @@ export function usePlayerStateMachine(
       isBoosting,
     } = inputs;
 
-    // WALK2RUN only ever applies to the plain straight-run case below (no
-    // boost, no turn, no jump) — leaving that exact state for ANY reason
-    // (releasing Shift, turning, boosting, jumping) clears the in-progress
-    // flag so no stale transition can resume from a stale timestamp later.
+    // Track state of walk-to-run transition
     const inStraightRunState = forward && run && !isBoosting && !left && !right && !jump;
     if (!inStraightRunState) {
       transitioningToRun.current = false;
     }
 
-    if (!isStunned) {
+    // 1. Determine Base State
+    let targetBaseState = PlayerState.IDLE;
+    let fadeOverride: number | undefined = undefined;
+
+    if (stunState === "NONE") {
       if (jump) {
-        playAnimation("JUMP");
+        targetBaseState = PlayerState.JUMP;
       } else if (forward) {
         if (run || isBoosting) {
-          if (left) playAnimation("RUN_LEFT");
-          else if (right) playAnimation("RUN_RIGHT");
-          else if (isBoosting) {
-            playAnimation("RUN_BOOST");
-            if (kickLeft) playAnimation("RUN_KICK_LEFT", "overlay");
-            else if (kickRight) playAnimation("RUN_KICK_RIGHT", "overlay");
-          } else {
-            if (!transitioningToRun.current && currentAnimationName === "WALK") {
+          if (left) targetBaseState = PlayerState.RUN_LEFT;
+          else if (right) targetBaseState = PlayerState.RUN_RIGHT;
+          else if (isBoosting) targetBaseState = PlayerState.RUN_BOOST;
+          else {
+            if (!transitioningToRun.current && currentAnimationName === PlayerState.WALK) {
               transitioningToRun.current = true;
               walk2RunStartedAt.current = now;
             }
             if (transitioningToRun.current && now - walk2RunStartedAt.current < WALK2RUN_DURATION_MS) {
-              playAnimation("WALK2RUN", "base", WALK2RUN_ENTER_FADE);
+              targetBaseState = PlayerState.WALK2RUN;
+              fadeOverride = WALK2RUN_ENTER_FADE;
             } else {
               transitioningToRun.current = false;
-              playAnimation("RUN");
+              targetBaseState = PlayerState.RUN;
             }
-            if (kickLeft) playAnimation("RUN_KICK_LEFT", "overlay");
-            else if (kickRight) playAnimation("RUN_KICK_RIGHT", "overlay");
           }
         } else {
-          playAnimation("WALK");
+          targetBaseState = PlayerState.WALK;
         }
       } else if (backward) {
-        playAnimation("WALK");
+        targetBaseState = PlayerState.WALK;
       } else if (left) {
-        playAnimation("TURN_LEFT");
+        targetBaseState = PlayerState.TURN_LEFT;
       } else if (right) {
-        playAnimation("TURN_RIGHT");
+        targetBaseState = PlayerState.TURN_RIGHT;
       } else {
-        if (currentSpeed > 15) playAnimation("RUN");
-        else if (currentSpeed > 6) playAnimation("WALK");
-        else playAnimation("IDLE");
+        if (currentSpeed > 15) targetBaseState = PlayerState.RUN;
+        else if (currentSpeed > 6) targetBaseState = PlayerState.WALK;
+        else targetBaseState = PlayerState.IDLE;
       }
     } else {
-      playAnimation("IDLE");
+      // Handle the various stun states
+      if (stunState === "FALL") targetBaseState = PlayerState.FALL;
+      else if (stunState === "STUMBLE") targetBaseState = PlayerState.STUMBLE;
+      else targetBaseState = PlayerState.IDLE; // "KICKED" falls back to IDLE unless we have a hit animation
+    }
+
+    // Apply Base State
+    playAnimation(targetBaseState, "base", fadeOverride);
+
+
+    // 2. Determine Overlay State (Kicks)
+    let targetOverlayState = PlayerOverlayState.NONE;
+
+    // ENHANCEMENT: Relaxed kicking constraints so you can kick even if you aren't sprinting straight!
+    if (stunState === "NONE") {
+       if (kickLeft) targetOverlayState = PlayerOverlayState.RUN_KICK_LEFT;
+       else if (kickRight) targetOverlayState = PlayerOverlayState.RUN_KICK_RIGHT;
+    }
+
+    // Apply Overlay State (only trigger if it's not NONE)
+    if (targetOverlayState !== PlayerOverlayState.NONE) {
+      playAnimation(targetOverlayState, "overlay");
     }
   };
 

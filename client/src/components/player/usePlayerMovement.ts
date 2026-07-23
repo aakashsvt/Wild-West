@@ -18,19 +18,22 @@ export function usePlayerMovement(
     delta: number,
     rb: RapierRigidBody,
     inputs: PlayerInputs,
-    isStunned: boolean,
+    stunState: "NONE" | "FALL" | "STUMBLE" | "KICKED",
     lastPosition: MutableRefObject<Vector3>
   ) => {
     const { forward, backward, left, right, run, isBoosting } = inputs;
     const linvel = rb.linvel();
     const velocity = new Vector3(linvel.x, linvel.y, linvel.z);
 
-    if (isStunned) {
-      rb.setLinvel({ x: 0, y: linvel.y, z: 0 }, true);
+    if (stunState !== "NONE") {
+      // If falling or kicked, stop completely. If stumbling, allow sliding momentum.
+      if (stunState === "FALL" || stunState === "KICKED") {
+        rb.setLinvel({ x: 0, y: linvel.y, z: 0 }, true);
+      }
       return {
-        velocity: new Vector3(0, linvel.y, 0),
-        currentSpeed: 0,
-        forwardDir: new Vector3(0, 0, 1) // default fallback
+        velocity,
+        currentSpeed: Math.sqrt(linvel.x ** 2 + linvel.z ** 2),
+        forwardDir: new Vector3(0, 0, 1)
       };
     }
 

@@ -141,6 +141,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
   const lastPosition = useRef(new Vector3());
   const proximityContacts = useRef<Set<string>>(new Set());
   const stunnedUntil = useRef<number>(0);
+  const stunState = useRef<"NONE" | "FALL" | "STUMBLE" | "KICKED">("NONE");
 
   useEffect(() => {
     playerRef.current = body.current;
@@ -185,6 +186,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
     const KICK_RANGE = 10;
     if (distance < KICK_RANGE) {
       stunnedUntil.current = performance.now() + 2000;
+      stunState.current = "KICKED";
       console.log(
         `aaaaa[LOCAL STUN] Remote player at distance ${distance.toFixed(1)} is kicking, local player stunned`,
       );
@@ -200,11 +202,37 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
   const { playAnimation, currentAnimationName, currentOverlayName, collisionHitsDuringOverlay, lastKickedAt } = usePlayerAnimations(horseRef);
   const { updateStateMachine, transitioningToRun, walk2RunStartedAt } = usePlayerStateMachine(playAnimation);
 
+
+  useEffect(() => {
+    const handleHazard = (e: any) => {
+      const { severity } = e.detail;
+      if (severity === "major") {
+        if (body.current) {
+          const vel = body.current.linvel();
+          body.current.setLinvel({ x: 0, y: vel.y, z: 0 }, true);
+        }
+        stunnedUntil.current = performance.now() + 3000;
+        stunState.current = "FALL";
+      } else {
+        stunnedUntil.current = performance.now() + 1000;
+        stunState.current = "STUMBLE";
+        if (body.current) {
+          const vel = body.current.linvel();
+          body.current.setLinvel({ x: vel.x * 0.5, y: vel.y, z: vel.z * 0.5 }, true);
+        }
+      }
+    };
+    window.addEventListener("hazard-impact", handleHazard);
+    return () => window.removeEventListener("hazard-impact", handleHazard);
+  }, []);
+
   useFrame((state, delta) => {
     if (!body.current || !isPlaying) return;
 
     const now = performance.now();
     const isStunned = stunnedUntil.current > now;
+    if (!isStunned) stunState.current = "NONE";
+    const currentStunState = isStunned ? stunState.current : "NONE";
     const keys = getKeys();
     const isBoosting = keys.forward && keys.boost;
 
@@ -226,14 +254,14 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
     const inputs = { ...keys, isBoosting };
 
     const { velocity, currentSpeed, forwardDir, displaySpeedKmh } = updateMovement(
-      delta, body.current, inputs, isStunned, lastPosition
+      delta, body.current, inputs, currentStunState, lastPosition
     );
 
     updateStateMachine(
-      now, inputs, isStunned, currentSpeed, currentAnimationName.current
+      now, inputs, currentStunState, currentSpeed, currentAnimationName.current
     );
 
-    const wantsLean = !isStunned && !keys.jump && keys.forward && !keys.run && !isBoosting && (keys.left || keys.right);
+    const wantsLean = currentStunState === "NONE" && !keys.jump && keys.forward && !keys.run && !isBoosting && (keys.left || keys.right);
     turnLeanInput.current.active = wantsLean;
     turnLeanInput.current.dir = keys.left ? 1 : -1;
     if (leanGroupRef.current) {
@@ -267,6 +295,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
 
   return (
     <RigidBody
+      name="player"
       ref={body}
       position={startTransform.positionTuple}
       // position={[500, 6.5787, 0]}
