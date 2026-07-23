@@ -41,3 +41,30 @@ We will hook into the existing "stun" logic (currently used for multiplayer kick
 - **High Visual Impact**: The combination of a physical bounce, a locked animation state, and violent camera shake feels incredibly polished to players and clients.
 - **Low Risk**: By isolating the hazard logic into its own component and using a simple CustomEvent, we completely avoid tangling with the massive spaghetti code of the horse movement math.
 - **Fast Execution**: This entire system can be built, polished, and edge-case tested within 2 to 3 days.
+
+## 5. AAA Polish & "Game Feel" Factors
+To elevate the collision system from a basic web game to a production-level AAA experience (like Red Dead Redemption), we will inject these crucial "Game Feel" elements:
+
+### A. Camera Shake (Screen Shake)
+The camera must physically react to the impact. 
+- **Minor Stumble**: A quick, sharp jolt on the Y-axis.
+- **Major Fall**: A violent, multi-axis shaking with noise that takes 0.5 seconds to decay.
+
+### B. Hit-Stop (Time Dilation)
+The secret to heavy, meaty impacts in AAA games (like Zelda or God of War) is "Hit-Stop". 
+- For a **Major Fall**, we briefly pause the animation and physical movement for **~50 milliseconds** the exact frame the horse hits the wall, before violently throwing the horse backward. This tricks the brain into feeling immense weight.
+
+### C. Layered Audio (SFX)
+An impact needs multiple layered sounds triggered simultaneously:
+- **Material Thud**: Wood breaking, metal clanging, or a dull dirt thud.
+- **Vocalization**: The horse whinnying or neighing in distress.
+- **Rider**: The cowboy grunting.
+
+### D. Particle Visual Effects (VFX)
+Instantiating a quick particle emitter exactly at the point of collision:
+- **Dust/Dirt kickup**.
+- **Splinters/Debris** flying away from the obstacle.
+
+### E. Post-Processing & UI
+- **Chromatic Aberration / Radial Blur**: For a major fall, briefly distorting the screen edges to simulate the rider's disorientation.
+- **Controller Haptics**: Using the browser's `navigator.vibrate()` API if they are playing on mobile, or gamepad rumble API.
