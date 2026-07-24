@@ -87,9 +87,14 @@ As of the current implementation, we have successfully architected and built the
 - **Bug Fix - Skinned Mesh Frustum Culling**: Selectively applied `frustumCulled={false}` to the `Jeans002` and `Boot002` sub-meshes to prevent the rider's legs from popping out of existence during the reverse-walk animation, preserving overall performance for remote players.
 - **Bug Fix - Camera Sprint Offset**: Updated `PlayerController` to restrict the third-person zoom-out effect to `keys.run && keys.forward`, preventing awkward camera snaps when pressing Shift while standing still.
 
-### Next Steps
-The core foundational collision, stun state machine, physical recoil systems, and hit-stop dilation are **100% complete**. 
-The next objectives focus purely on adding "juice" and game-feel polish:
-1. **Post-Processing (Hallucination)**: Using `@react-three/postprocessing` to trigger a violent Chromatic Aberration / RGB split glitch effect on the camera lens during major collisions.
-2. **Particle VFX**: Spawning dust/wood debris upon collision.
-3. **SFX Audio**: Layering in appropriate sound effects.
+## Progress Checkpoint 2 (Completed)
+
+- **Post-Processing Pipeline Refactoring**: Extracted a massive block of shaders and post-processing nodes out of `Game.tsx` into a dedicated, single-responsibility `PostProcessingPipeline.tsx` component.
+- **Dynamic Chromatic Aberration**: Repurposed the custom `ColorGradeShader` to handle RGB channel splitting natively, saving performance over adding a new pass. Triggered via a `hazard-impact` listener with slow decay to simulate a concussion.
+- **Dynamic Color Drain**: Added dynamic desaturation alongside the glitch. Major crashes instantly drain the world to near black-and-white, slowly bleeding back to normal over ~5 seconds.
+- **Bug Fix - Delta Time Spiral**: Capped `delta` time inside the post-processing `useFrame` loop to `100ms` max, preventing a known bug where switching browser tabs caused the time delta to multiply and permanently break the shader math.
+- **Crash Effect Debug UI**: Added a `Leva` panel to instantly A/B test the glitch and color drain effects individually.
+- **Accurate Directional Impact Angle Math**: Upgraded `Hazard.tsx` to read the exact physics `contact normal` (`e.manifold.normal()`) instead of the obstacle's center position. Added a strict dot-product threshold (0.80) to flawlessly differentiate between direct Head-On crashes, Side-Swipes, and Rear-End collisions.
+- **Side-Swipe Stumble System**: Routed the new `impactAngle` through the system. Side-swiping a fence no longer triggers a massive Hit-Stop or color drain. Instead, it triggers a minor micro-glitch, a 30% speed reduction, and properly triggers the horse's built-in `STUMBLE` animation clip without breaking forward momentum.
+
+*(Future VFX and Audio tasks have been migrated to `FUTURE_VFX_PLAN.md`)*
