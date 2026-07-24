@@ -3,6 +3,8 @@ import { useSocketEvent } from "@/hooks/use-socket";
 import type { RacePlayerState } from "@shared/types/multiplayer";
 import type { RapierRigidBody } from "@react-three/rapier";
 import { Vector3 } from "three";
+import { useControls } from "leva";
+import { useRef } from "react";
 
 export type ImpactSeverity = "minor" | "medium" | "major";
 export type ImpactSource = "ENVIRONMENT" | "PLAYER_KICK";
@@ -14,6 +16,13 @@ export function usePlayerImpacts(
   triggerShake: (intensity: number, duration: number) => void,
   shakeConfigRef: React.MutableRefObject<any>
 ) {
+
+  const thresholdControls = useControls("Impact Thresholds", {
+    minorSpeed: { value: 20, min: 1, max: 100, step: 1 },
+    majorSpeed: { value: 45, min: 1, max: 200, step: 1 },
+  });
+  const thresholdsRef = useRef(thresholdControls);
+  thresholdsRef.current = thresholdControls;
 
   const triggerStun = useCallback((severity: ImpactSeverity, source: ImpactSource) => {
     const now = performance.now();
@@ -64,7 +73,17 @@ export function usePlayerImpacts(
   // 1. Listen for Hazards (Cubes/Fences)
   useEffect(() => {
     const handleHazard = (e: any) => {
-      triggerStun(e.detail.severity, "ENVIRONMENT");
+      const { impactVelocity } = e.detail;
+      
+      let severity: ImpactSeverity = "minor";
+      if (impactVelocity >= thresholdsRef.current.majorSpeed) {
+        severity = "major";
+      } else if (impactVelocity >= thresholdsRef.current.minorSpeed) {
+        severity = "medium";
+      }
+
+      console.log(`[IMPACT MANAGER] Processed severity: ${severity} (Speed: ${impactVelocity.toFixed(1)})`);
+      triggerStun(severity, "ENVIRONMENT");
     };
     window.addEventListener("hazard-impact", handleHazard);
     return () => window.removeEventListener("hazard-impact", handleHazard);

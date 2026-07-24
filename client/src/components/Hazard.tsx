@@ -4,13 +4,8 @@ import * as THREE from "three";
 
 export type HazardSeverity = "minor" | "medium" | "major";
 
-export const IMPACT_THRESHOLDS = {
-  MINOR: 20,
-  MEDIUM: 40
-};
-
 export type HazardImpactEventDetail = {
-  severity: HazardSeverity;
+  impactVelocity: number;
   hazardPosition: THREE.Vector3Tuple;
 };
 
@@ -42,20 +37,13 @@ export function Hazard({
         impactVelocity = Math.hypot(vel.x, vel.y, vel.z);
       }
 
-      let dynamicSeverity: HazardSeverity = "minor";
-      if (impactVelocity >= IMPACT_THRESHOLDS.MEDIUM) {
-        dynamicSeverity = "major";
-      } else if (impactVelocity >= IMPACT_THRESHOLDS.MINOR) {
-        dynamicSeverity = "medium";
-      }
-
-      console.log(`💥 [HAZARD IMPACT] Player hit obstacle with a velocity force of: ${impactVelocity.toFixed(2)} units/sec! (Severity: ${dynamicSeverity})`);
+      console.log(`💥 [HAZARD IMPACT] Player hit obstacle with a velocity force of: ${impactVelocity.toFixed(2)} units/sec!`);
 
       // Dispatch a global event so the PlayerController can pick it up
       window.dispatchEvent(
         new CustomEvent<HazardImpactEventDetail>("hazard-impact", {
           detail: {
-            severity: dynamicSeverity,
+            impactVelocity,
             hazardPosition: position,
           }
         })
