@@ -208,4 +208,18 @@ export function jumpCameraBobOffset(t: number): number {
   return last * JUMP_CAMERA_BOB_SCALE * JUMP_CAMERA_BOB_INTENSITY;
 }
 export const NETWORK_STATE_INTERVAL = 1 / 30;
-export const START_LANE_SPACING = 10;
+export const START_LANE_SPACING = 10;
+export const BACKWARD_WALK_SPEED_MULT = 0.8;
+
+// Stun & Impact Recoil Constants
+export const FALL_RECOIL_DURATION_MS = 300;
+export const FALL_RECOIL_SPEED_MULTIPLIER = 0.4;
+export const STUMBLE_MEDIUM_RECOIL_DURATION_MS = 300;
+export const STUMBLE_MINOR_RECOIL_DURATION_MS = 300;
+export const STUMBLE_MEDIUM_RECOIL_SPEED_MULT = 0.8;
+export const STUMBLE_MINOR_RECOIL_SPEED_MULT = 0.4;
+
+// Reverse Animation Constants
+export const MIN_SLIDE_SPEED_FOR_STUMBLE = 5;
+export const STUMBLE_ANIMATION_TIMESCALE = -1.5;
+export const BACKWARD_ANIMATION_TIMESCALE = -1.0;

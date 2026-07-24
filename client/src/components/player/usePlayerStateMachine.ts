@@ -1,5 +1,11 @@
 import { useRef } from "react";
-import { WALK2RUN_DURATION_MS, WALK2RUN_ENTER_FADE } from "./constants";
+import {
+  WALK2RUN_DURATION_MS,
+  WALK2RUN_ENTER_FADE,
+  MIN_SLIDE_SPEED_FOR_STUMBLE,
+  STUMBLE_ANIMATION_TIMESCALE,
+  BACKWARD_ANIMATION_TIMESCALE,
+} from "./constants";
 
 export type PlayerInputs = {
   forward: boolean;
@@ -99,7 +105,7 @@ export function usePlayerStateMachine(
         }
       } else if (backward) {
         targetBaseState = PlayerState.WALK;
-        targetTimeScale = -1.0; // Play walk backwards if moving backward
+        targetTimeScale = BACKWARD_ANIMATION_TIMESCALE; // Play walk backwards if moving backward
       } else if (left) {
         targetBaseState = PlayerState.TURN_LEFT;
       } else if (right) {
@@ -114,8 +120,14 @@ export function usePlayerStateMachine(
       if (stunState === "FALL") {
         targetBaseState = PlayerState.FALL;
       } else if (stunState === "STUMBLE") {
-        targetBaseState = PlayerState.WALK;
-        targetTimeScale = -1.5; // Play walk quickly in reverse for the bounce back
+        // Only play the reverse walk animation if the horse is physically sliding backward from the recoil.
+        // Once friction stops the slide, seamlessly fall back to IDLE while they remain stunned.
+        if (currentSpeed > MIN_SLIDE_SPEED_FOR_STUMBLE) {
+          targetBaseState = PlayerState.WALK;
+          targetTimeScale = STUMBLE_ANIMATION_TIMESCALE; // Play walk quickly in reverse for the bounce back
+        } else {
+          targetBaseState = PlayerState.IDLE;
+        }
       } else {
         targetBaseState = PlayerState.IDLE; // "KICKED" falls back to IDLE unless we have a hit animation
       }

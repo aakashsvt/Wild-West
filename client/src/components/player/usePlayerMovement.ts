@@ -6,6 +6,13 @@ import {
   TURN_SPEED,
   BOOST_SPEED_MULTIPLIER,
   WALK_TARGET_SPEED,
+  BACKWARD_WALK_SPEED_MULT,
+  FALL_RECOIL_DURATION_MS,
+  FALL_RECOIL_SPEED_MULTIPLIER,
+  STUMBLE_MEDIUM_RECOIL_DURATION_MS,
+  STUMBLE_MEDIUM_RECOIL_SPEED_MULT,
+  STUMBLE_MINOR_RECOIL_DURATION_MS,
+  STUMBLE_MINOR_RECOIL_SPEED_MULT,
 } from "./constants";
 import { PlayerInputs } from "./usePlayerStateMachine";
 import { MutableRefObject } from "react";
@@ -36,11 +43,11 @@ export function usePlayerMovement(
       let recoilSpeed = 0;
       
       // Actively push backward during the first fraction of the stun so physics damping doesn't eat the bounce
-      if (stunState === "FALL" && timeLeft > 2700) {
-        recoilSpeed = -MAX_SPEED * 0.4;
+      if (stunState === "FALL" && timeLeft > (3000 - FALL_RECOIL_DURATION_MS)) {
+        recoilSpeed = -MAX_SPEED * FALL_RECOIL_SPEED_MULTIPLIER;
       } else if (stunState === "STUMBLE") {
-        if (timeLeft > 1200) recoilSpeed = -WALK_TARGET_SPEED * 0.8; // Medium hit (max 1500)
-        else if (timeLeft > 700 && timeLeft <= 1000) recoilSpeed = -WALK_TARGET_SPEED * 0.4; // Minor hit (max 1000)
+        if (timeLeft > (1500 - STUMBLE_MEDIUM_RECOIL_DURATION_MS)) recoilSpeed = -WALK_TARGET_SPEED * STUMBLE_MEDIUM_RECOIL_SPEED_MULT;
+        else if (timeLeft > (1000 - STUMBLE_MINOR_RECOIL_DURATION_MS) && timeLeft <= 1000) recoilSpeed = -WALK_TARGET_SPEED * STUMBLE_MINOR_RECOIL_SPEED_MULT;
       }
 
       if (recoilSpeed !== 0) {
@@ -88,7 +95,7 @@ export function usePlayerMovement(
         ? MAX_SPEED
         : WALK_TARGET_SPEED;
     } else if (backward) {
-      targetSpeed = -WALK_TARGET_SPEED * 0.8; // Walk slightly slower backward
+      targetSpeed = -WALK_TARGET_SPEED * BACKWARD_WALK_SPEED_MULT;
     }
 
     const forwardSpeed = velocity.dot(forwardDir);
