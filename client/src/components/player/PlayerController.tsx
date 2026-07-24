@@ -210,6 +210,11 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
   });
   const shakeConfigRef = useRef(shakeConfig);
   shakeConfigRef.current = shakeConfig;
+
+  const colliderConfig = useControls("Player Collider", {
+    horseWidth: { value: 0.92, min: 0.1, max: 2.0, step: 0.01 },
+    riderWidth: { value: 1.2, min: 0.1, max: 2.0, step: 0.01 },
+  });
   const { updateNetwork } = usePlayerNetwork();
   const { playAnimation, currentAnimationName, currentOverlayName, collisionHitsDuringOverlay, lastKickedAt } = usePlayerAnimations(horseRef);
   const { updateStateMachine, transitioningToRun, walk2RunStartedAt } = usePlayerStateMachine(playAnimation);
@@ -338,12 +343,12 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
 
       /> */}
       <RoundCuboidCollider
-        args={[1.4, 1.7, 2, 0.2]}
+        args={[colliderConfig.riderWidth, 1.7, 2, 0.2]}
         position={[0, 7, 0]}
         restitution={0}
       />
       <RoundCuboidCollider
-        args={[1.4, 2.7, 5, 0.2]}
+        args={[colliderConfig.horseWidth, 2.7, 5, 0.2]}
         position={[0, 2.9, 1]}
         restitution={0}
       />
@@ -351,7 +356,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
       <RoundCuboidCollider
         args={[3, 5, 5, 0.2]}
         position={[0, 5.2, 1]}
-        // sensor
+        sensor
         onCollisionEnter={({ other }) => {
           console.log("aaaaaacollision enter", other.rigidBody);
           if (!other.rigidBody) return;
