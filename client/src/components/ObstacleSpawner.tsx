@@ -13,8 +13,8 @@ const offsetz = 20;
 
 export function ObstacleSpawner() {
   const { yOffset, scaleMultiplier } = useControls("Obstacles", {
-    yOffset: { value: 5.5, min: -10, max: 20, step: 0.1 },
-    scaleMultiplier: { value: 1.0, min: 0.1, max: 5.0, step: 0.1 }
+    yOffset: { value: 0.0, min: -10, max: 20, step: 0.1 },
+    scaleMultiplier: { value: 4.0, min: 0.1, max: 10.0, step: 0.1 }
   });
 
   const obstacles = useMemo(() => {

@@ -204,6 +204,9 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
     minorIntensity: { value: 0.3, min: 0.1, max: 5.0, step: 0.1 },
     minorDuration: { value: 0.2, min: 0.1, max: 2.0, step: 0.1 },
     "Test Minor": button((get) => triggerShake(get("Camera Shake.minorIntensity"), get("Camera Shake.minorDuration"))),
+    mediumIntensity: { value: 0.6, min: 0.1, max: 5.0, step: 0.1 },
+    mediumDuration: { value: 0.35, min: 0.1, max: 2.0, step: 0.1 },
+    "Test Medium": button((get) => triggerShake(get("Camera Shake.mediumIntensity"), get("Camera Shake.mediumDuration"))),
     majorIntensity: { value: 1.0, min: 0.1, max: 5.0, step: 0.1 },
     majorDuration: { value: 0.5, min: 0.1, max: 2.0, step: 0.1 },
     "Test Major": button((get) => triggerShake(get("Camera Shake.majorIntensity"), get("Camera Shake.majorDuration"))),
@@ -231,6 +234,14 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
         }
         stunnedUntil.current = performance.now() + 3000;
         stunState.current = "FALL";
+      } else if (severity === "medium") {
+        triggerShake(shakeConfigRef.current.mediumIntensity, shakeConfigRef.current.mediumDuration);
+        stunnedUntil.current = performance.now() + 1500;
+        stunState.current = "STUMBLE";
+        if (body.current) {
+          const vel = body.current.linvel();
+          body.current.setLinvel({ x: vel.x * 0.2, y: vel.y, z: vel.z * 0.2 }, true);
+        }
       } else {
         triggerShake(shakeConfigRef.current.minorIntensity, shakeConfigRef.current.minorDuration);
         stunnedUntil.current = performance.now() + 1000;
