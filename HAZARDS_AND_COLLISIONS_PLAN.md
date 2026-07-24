@@ -68,3 +68,22 @@ Instantiating a quick particle emitter exactly at the point of collision:
 ### E. Post-Processing & UI
 - **Chromatic Aberration / Radial Blur**: For a major fall, briefly distorting the screen edges to simulate the rider's disorientation.
 - **Controller Haptics**: Using the browser's `navigator.vibrate()` API if they are playing on mobile, or gamepad rumble API.
+
+## Progress Checkpoint (Completed)
+
+As of the current implementation, we have successfully architected and built the following AAA physics and collision features:
+
+- **Unified Impact System (usePlayerImpacts.ts)**: Extracted all stun logic from the PlayerController into a centralized hook. This hook successfully arbitrates both environmental collisions (hazards) and multiplayer interactions (kicks) with priority protection (minor impacts cannot overwrite major stun timers).
+- **Procedural Obstacle Spawning**: Developed Obstacle.tsx and ObstacleSpawner.tsx to procedurally drop physics-based wooden cubes along the track spline, serving as interactive hazards.
+- **Dynamic Physics Measurement**: Hazard.tsx now acts as a pure sensor. On collision, it broadcasts the precise impactVelocity via a global event, allowing the game logic to categorize it dynamically rather than relying on hardcoded triggers.
+- **Live-Tuning Leva UI**: Introduced an ""Impact Thresholds"" folder in the Leva UI so severity brackets (minorSpeed, majorSpeed) can be tuned in real-time.
+- **Active Physics Recoil (usePlayerMovement.ts)**: Solved the issue where Rapier's harsh linearDamping and track friction would swallow collisions by actively applying a continuous backwards velocity curve during the first ~300ms of a stun, forcefully separating the player from the obstacle wall.
+- **Reverse Animations & TimeScale Manipulation**: Upgraded usePlayerAnimations.ts to accept mathematical 	imeScale parameters. We completely removed the static forward stumble animation (which clipped into walls) and replaced it with a physics-driven, reverse-walk animation (	imeScale = -1.5) that perfectly syncs with the physical recoil. This is also applied when the player naturally holds the S (Backward) key.
+- **Centralized Constants**: Extracted all physics multipliers, stun durations, and animation speeds out of component logic into properly named, modular constants in constants.ts.
+
+### Next Steps
+The core foundational collision, stun state machine, and physical recoil systems are **100% complete**. 
+The next objectives focus purely on adding ""juice"" and game-feel polish:
+1. **Hit-Stop (Time Dilation)**: Adding a brief micro-pause upon impact to make hits feel incredibly heavy.
+2. **Particle VFX**: Spawning dust/wood debris upon collision.
+3. **SFX Audio**: Layering in appropriate sound effects.
