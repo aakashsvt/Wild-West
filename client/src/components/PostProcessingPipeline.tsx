@@ -7,6 +7,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { useControls } from 'leva';
 
 // ── HeatHazeShader ────────────────────────────────────────────────────────────
 // From gamedemo_vfx_ideas_backlog's parked "heat haze/mirage" idea, added to
@@ -216,19 +217,37 @@ type Props = {
 export function PostProcessingPipeline({ playerRef, isFirstPersonRef }: Props) {
   const { gl, scene, camera, size } = useThree()
 
+  const { crashEffectMode } = useControls("Crash Effects (Debug)", {
+    crashEffectMode: {
+      label: "Active Effect",
+      options: {
+        "Both (1 & 2)": "both",
+        "1. Glitch Only": "glitch",
+        "2. Drain Only": "drain",
+        "None": "none"
+      }
+    }
+  })
+
   const composer = useRef<EffectComposer | null>(null)
   const blurPass = useRef<ShaderPass | null>(null)
   const heatHazePass = useRef<ShaderPass | null>(null)
   const colorGradePass = useRef<ShaderPass | null>(null)
   const tempVec = useRef(new THREE.Vector3())
   const chromaticIntensity = useRef(0)
+  const currentSaturation = useRef(0.96) // Base western look saturation
 
-  // Listen for physical impacts to trigger the post-processing glitch
+  // Listen for physical impacts to trigger the post-processing glitch and color drain
   useEffect(() => {
     const onHazard = (e: any) => {
       const vel = e.detail?.impactVelocity || 0;
-      if (vel >= 45) chromaticIntensity.current = 0.10; // Subtle peak
-      else if (vel >= 20) chromaticIntensity.current = 0.04; // Very light peak
+      if (vel >= 45) {
+        chromaticIntensity.current = 0.10; // Subtle peak
+        currentSaturation.current = 0.15; // Massive color drain (almost black & white)
+      } else if (vel >= 20) {
+        chromaticIntensity.current = 0.04; // Very light peak
+        currentSaturation.current = 0.50; // Moderate color drain
+      }
     };
     window.addEventListener("hazard-impact", onHazard);
     return () => window.removeEventListener("hazard-impact", onHazard);
@@ -280,6 +299,9 @@ export function PostProcessingPipeline({ playerRef, isFirstPersonRef }: Props) {
   }, [gl, scene, camera, size])
 
   useFrame((state, delta) => {
+    // Prevent huge jumps when tabbing back in (cap delta to 100ms)
+    const dt = Math.min(delta, 0.1)
+
     const comp = composer.current
     const blur = blurPass.current
     const heat = heatHazePass.current
@@ -287,11 +309,23 @@ export function PostProcessingPipeline({ playerRef, isFirstPersonRef }: Props) {
     const body = playerRef.current
 
     if (grade) {
-      // Decay the glitch extremely slowly over time (takes ~8-10 seconds to fully recover)
+      // 1. Decay the chromatic glitch extremely slowly over time
       if (chromaticIntensity.current > 0) {
-        chromaticIntensity.current = Math.max(0, chromaticIntensity.current - delta * 0.035); // Super slow fade
+        chromaticIntensity.current = Math.max(0, chromaticIntensity.current - dt * 0.035); // Super slow fade
       }
-      grade.uniforms.chromaticAberration.value = chromaticIntensity.current;
+      // Only apply to shader if enabled in Leva
+      grade.uniforms.chromaticAberration.value = 
+        (crashEffectMode === "both" || crashEffectMode === "glitch") ? chromaticIntensity.current : 0;
+
+      // 2. Slowly bleed color (saturation) back into the world
+      if (currentSaturation.current < 0.96) {
+        // Lerp moves 40% of the remaining distance per second (takes ~4-5s to visually recover)
+        // Cap lerp factor at 1.0 to guarantee we never overshoot
+        currentSaturation.current = THREE.MathUtils.lerp(currentSaturation.current, 0.96, Math.min(dt * 0.4, 1.0)); 
+      }
+      // Only apply to shader if enabled in Leva
+      grade.uniforms.saturation.value = 
+        (crashEffectMode === "both" || crashEffectMode === "drain") ? currentSaturation.current : 0.96;
     }
 
     if (heat) heat.uniforms.time.value = state.clock.elapsedTime
