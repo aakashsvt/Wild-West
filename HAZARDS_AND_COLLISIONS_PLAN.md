@@ -47,8 +47,8 @@ To elevate the collision system from a basic web game to a production-level AAA 
 
 ### A. Camera Shake (Screen Shake)
 The camera must physically react to the impact. 
-- **Minor Stumble**: A quick, sharp jolt on the Y-axis.
-- **Major Fall**: A violent, multi-axis shaking with noise that takes 0.5 seconds to decay.
+- **Minor Stumble**: A quick, sharp jolt on the Y-axis. (Intensity: 0.3, Duration: 0.2s)
+- **Major Fall**: A violent, multi-axis shaking with noise that takes 0.5 seconds to decay. (Intensity: 1.0, Duration: 0.5s)
 
 ### B. Hit-Stop (Time Dilation)
 The secret to heavy, meaty impacts in AAA games (like Zelda or God of War) is "Hit-Stop". 

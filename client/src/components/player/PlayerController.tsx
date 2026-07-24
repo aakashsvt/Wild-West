@@ -200,15 +200,16 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
   const { updateMovement } = usePlayerMovement(setSpeed, addScore);
   const { updateCamera, triggerShake } = usePlayerCamera(camera);
 
-  useControls("AAA Camera Shake", {
-    intensity: { value: 1.5, min: 0.1, max: 5.0, step: 0.1 },
-    duration: { value: 0.5, min: 0.1, max: 2.0, step: 0.1 },
-    "Trigger Custom Shake": button((get) => {
-      triggerShake(get("AAA Camera Shake.intensity"), get("AAA Camera Shake.duration"));
-    }),
-    "Minor Impact": button(() => triggerShake(0.8, 0.3)),
-    "Major Impact": button(() => triggerShake(2.5, 0.7)),
+  const shakeConfig = useControls("Camera Shake", {
+    minorIntensity: { value: 0.3, min: 0.1, max: 5.0, step: 0.1 },
+    minorDuration: { value: 0.2, min: 0.1, max: 2.0, step: 0.1 },
+    "Test Minor": button((get) => triggerShake(get("Camera Shake.minorIntensity"), get("Camera Shake.minorDuration"))),
+    majorIntensity: { value: 1.0, min: 0.1, max: 5.0, step: 0.1 },
+    majorDuration: { value: 0.5, min: 0.1, max: 2.0, step: 0.1 },
+    "Test Major": button((get) => triggerShake(get("Camera Shake.majorIntensity"), get("Camera Shake.majorDuration"))),
   });
+  const shakeConfigRef = useRef(shakeConfig);
+  shakeConfigRef.current = shakeConfig;
   const { updateNetwork } = usePlayerNetwork();
   const { playAnimation, currentAnimationName, currentOverlayName, collisionHitsDuringOverlay, lastKickedAt } = usePlayerAnimations(horseRef);
   const { updateStateMachine, transitioningToRun, walk2RunStartedAt } = usePlayerStateMachine(playAnimation);
@@ -218,6 +219,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
     const handleHazard = (e: any) => {
       const { severity } = e.detail;
       if (severity === "major") {
+        triggerShake(shakeConfigRef.current.majorIntensity, shakeConfigRef.current.majorDuration);
         if (body.current) {
           const vel = body.current.linvel();
           body.current.setLinvel({ x: 0, y: vel.y, z: 0 }, true);
@@ -225,6 +227,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
         stunnedUntil.current = performance.now() + 3000;
         stunState.current = "FALL";
       } else {
+        triggerShake(shakeConfigRef.current.minorIntensity, shakeConfigRef.current.minorDuration);
         stunnedUntil.current = performance.now() + 1000;
         stunState.current = "STUMBLE";
         if (body.current) {
@@ -235,7 +238,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
     };
     window.addEventListener("hazard-impact", handleHazard);
     return () => window.removeEventListener("hazard-impact", handleHazard);
-  }, []);
+  }, [triggerShake]);
 
   useFrame((state, delta) => {
     if (!body.current || !isPlaying) return;

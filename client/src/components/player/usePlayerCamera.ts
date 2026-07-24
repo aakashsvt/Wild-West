@@ -1,4 +1,4 @@
-import { useRef, MutableRefObject } from "react";
+import { useRef, MutableRefObject, useCallback } from "react";
 import { PerspectiveCamera, Vector3, Quaternion } from "three";
 import * as THREE from "three";
 import type { RapierRigidBody } from "@react-three/rapier";
@@ -23,9 +23,9 @@ import {
 export function usePlayerCamera(camera: PerspectiveCamera) {
   const shakeState = useRef({ intensity: 0, duration: 0, timeRemaining: 0 });
 
-  const triggerShake = (intensity: number, duration: number) => {
+  const triggerShake = useCallback((intensity: number, duration: number) => {
     shakeState.current = { intensity, duration, timeRemaining: duration };
-  };
+  }, []);
   const cameraSnapped = useRef(false);
   const fpCameraSnapped = useRef(false);
 

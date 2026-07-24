@@ -54,10 +54,12 @@ When `stunState` is anything other than `"NONE"`, `usePlayerMovement` completely
 
 ---
 
-## 5. AAA Camera Shake Integration
+## 5. Camera Shake Integration
 To provide a production-level "Game Feel" during impacts, the camera features a decoupled, frame-rate independent screen shake system.
 
 - **Implementation**: `usePlayerCamera.ts` exports a `triggerShake(intensity, duration)` function.
+  - **Minor Impact**: Uses a low intensity (e.g., `0.3`) and short duration (e.g., `0.2` seconds).
+  - **Major Impact**: Uses a high intensity (e.g., `1.0`) and longer duration (e.g., `0.5` seconds).
 - **Math**: Rather than relying on simple random numbers, the shake calculates 5 distinct high-frequency sine and cosine waves (driven by `performance.now()` to ensure independence from frame-time deltas).
 - **Effect**: It offsets the camera's `X` and `Y` position while simultaneously adding violent noise to the `Pitch`, `Yaw`, and `Roll` (`Z` rotation) of the camera, simulating a realistic head-trauma impact.
 - **Triggering**: The shake can be called dynamically from `PlayerController` during hazard collisions or via the debug Leva UI.
