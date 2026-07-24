@@ -19,29 +19,42 @@ export function usePlayerMovement(
     rb: RapierRigidBody,
     inputs: PlayerInputs,
     stunState: "NONE" | "FALL" | "STUMBLE" | "KICKED",
+    stunnedUntil: number,
     lastPosition: MutableRefObject<Vector3>
   ) => {
     const { forward, backward, left, right, run, isBoosting } = inputs;
     const linvel = rb.linvel();
     const velocity = new Vector3(linvel.x, linvel.y, linvel.z);
-
-    if (stunState !== "NONE") {
-      // If falling or kicked, stop completely. If stumbling, allow sliding momentum.
-      if (stunState === "FALL" || stunState === "KICKED") {
-        rb.setLinvel({ x: 0, y: linvel.y, z: 0 }, true);
-      }
-      return {
-        velocity,
-        currentSpeed: Math.sqrt(linvel.x ** 2 + linvel.z ** 2),
-        forwardDir: new Vector3(0, 0, 1)
-      };
-    }
-
     const rotation = rb.rotation();
     const quat1 = new Quaternion(rotation.x, rotation.y, rotation.z, rotation.w);
     const euler = new Euler().setFromQuaternion(quat1);
     const forwardDir = new Vector3(0, 0, 1).applyEuler(euler).normalize();
     const currentSpeed = Math.sqrt(linvel.x ** 2 + linvel.z ** 2);
+
+    if (stunState !== "NONE") {
+      const timeLeft = stunnedUntil - performance.now();
+      let recoilSpeed = 0;
+      
+      // Actively push backward during the first fraction of the stun so physics damping doesn't eat the bounce
+      if (stunState === "FALL" && timeLeft > 2700) {
+        recoilSpeed = -MAX_SPEED * 0.4;
+      } else if (stunState === "STUMBLE") {
+        if (timeLeft > 1200) recoilSpeed = -WALK_TARGET_SPEED * 0.8; // Medium hit (max 1500)
+        else if (timeLeft > 700 && timeLeft <= 1000) recoilSpeed = -WALK_TARGET_SPEED * 0.4; // Minor hit (max 1000)
+      }
+
+      if (recoilSpeed !== 0) {
+        const targetVelocity = forwardDir.clone().multiplyScalar(recoilSpeed);
+        velocity.lerp(targetVelocity, delta * 15);
+        rb.setLinvel({ x: velocity.x, y: linvel.y, z: velocity.z }, true);
+      }
+
+      return {
+        velocity,
+        currentSpeed,
+        forwardDir
+      };
+    }
 
     // =========================
     // 🔁 TURNING (SMOOTH)
@@ -75,7 +88,7 @@ export function usePlayerMovement(
         ? MAX_SPEED
         : WALK_TARGET_SPEED;
     } else if (backward) {
-      targetSpeed = -MAX_SPEED * 0.4;
+      targetSpeed = -WALK_TARGET_SPEED * 0.8; // Walk slightly slower backward
     }
 
     const forwardSpeed = velocity.dot(forwardDir);
@@ -91,7 +104,7 @@ export function usePlayerMovement(
     );
     const targetVelocity = forwardDir.clone().multiplyScalar(newForwardSpeed);
 
-    const isWalking = forward && !run && !isBoosting;
+    const isWalking = (forward || backward) && !run && !isBoosting;
     velocity.lerp(targetVelocity, isWalking ? 0.9 : 0.2);
 
     rb.setLinvel({ x: velocity.x, y: linvel.y, z: velocity.z }, true);

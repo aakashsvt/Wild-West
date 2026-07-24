@@ -12,7 +12,8 @@ export function usePlayerAnimations(horseRef: React.MutableRefObject<any>) {
   const playAnimation = (
     name: string,
     type: "base" | "overlay" = "base",
-    fadeDuration = 0.2
+    fadeDuration = 0.2,
+    timeScale = 1
   ) => {
     const actions = horseRef.current?.actions;
 
@@ -24,10 +25,14 @@ export function usePlayerAnimations(horseRef: React.MutableRefObject<any>) {
     // BASE ANIMATIONS
     // =========================
     if (type === "base") {
-      if (currentBaseAction.current === next) return;
+      if (currentBaseAction.current === next) {
+        // If it's the same animation but the timescale changed (e.g. from forward to reverse), update it
+        next.setEffectiveTimeScale(timeScale);
+        return;
+      }
 
       currentBaseAction.current?.fadeOut(fadeDuration);
-      next.reset().fadeIn(fadeDuration).play();
+      next.reset().setEffectiveTimeScale(timeScale).fadeIn(fadeDuration).play();
 
       currentBaseAction.current = next;
       currentAnimationName.current = name;

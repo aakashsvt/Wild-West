@@ -223,7 +223,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
     const inputs = { ...keys, isBoosting };
 
     const { velocity, currentSpeed, forwardDir, displaySpeedKmh } = updateMovement(
-      delta, body.current, inputs, currentStunState, lastPosition
+      delta, body.current, inputs, currentStunState, stunnedUntil.current, lastPosition
     );
 
     updateStateMachine(

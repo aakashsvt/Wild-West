@@ -38,7 +38,7 @@ export enum PlayerOverlayState {
 }
 
 export function usePlayerStateMachine(
-  playAnimation: (name: string, type?: "base" | "overlay", fadeDuration?: number) => void
+  playAnimation: (name: string, type?: "base" | "overlay", fadeDuration?: number, timeScale?: number) => void
 ) {
   const transitioningToRun = useRef(false);
   const walk2RunStartedAt = useRef(0);
@@ -71,6 +71,7 @@ export function usePlayerStateMachine(
     // 1. Determine Base State
     let targetBaseState = PlayerState.IDLE;
     let fadeOverride: number | undefined = undefined;
+    let targetTimeScale = 1;
 
     if (stunState === "NONE") {
       if (jump) {
@@ -98,6 +99,7 @@ export function usePlayerStateMachine(
         }
       } else if (backward) {
         targetBaseState = PlayerState.WALK;
+        targetTimeScale = -1.0; // Play walk backwards if moving backward
       } else if (left) {
         targetBaseState = PlayerState.TURN_LEFT;
       } else if (right) {
@@ -109,13 +111,18 @@ export function usePlayerStateMachine(
       }
     } else {
       // Handle the various stun states
-      if (stunState === "FALL") targetBaseState = PlayerState.FALL;
-      else if (stunState === "STUMBLE") targetBaseState = PlayerState.STUMBLE;
-      else targetBaseState = PlayerState.IDLE; // "KICKED" falls back to IDLE unless we have a hit animation
+      if (stunState === "FALL") {
+        targetBaseState = PlayerState.FALL;
+      } else if (stunState === "STUMBLE") {
+        targetBaseState = PlayerState.WALK;
+        targetTimeScale = -1.5; // Play walk quickly in reverse for the bounce back
+      } else {
+        targetBaseState = PlayerState.IDLE; // "KICKED" falls back to IDLE unless we have a hit animation
+      }
     }
 
     // Apply Base State
-    playAnimation(targetBaseState, "base", fadeOverride);
+    playAnimation(targetBaseState, "base", fadeOverride, targetTimeScale);
 
 
     // 2. Determine Overlay State (Kicks)

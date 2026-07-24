@@ -3,6 +3,7 @@ import { useSocketEvent } from "@/hooks/use-socket";
 import type { RacePlayerState } from "@shared/types/multiplayer";
 import type { RapierRigidBody } from "@react-three/rapier";
 import { Vector3 } from "three";
+import * as THREE from "three";
 import { useControls } from "leva";
 import { useRef } from "react";
 
@@ -32,30 +33,44 @@ export function usePlayerImpacts(
     if (isCurrentlyFalling && severity !== "major") return;
 
     if (source === "ENVIRONMENT") {
+      // Calculate forward direction to bounce the player backwards
+      let forwardDir = new Vector3(0, 0, 1);
+      let currentYVel = 0;
+      if (bodyRef.current) {
+          const rotation = bodyRef.current.rotation();
+          const quat = new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w);
+          const euler = new THREE.Euler().setFromQuaternion(quat);
+          forwardDir = new Vector3(0, 0, 1).applyEuler(euler).normalize();
+          currentYVel = bodyRef.current.linvel().y;
+      }
+
       if (severity === "major") {
         triggerShake(shakeConfigRef.current.majorIntensity, shakeConfigRef.current.majorDuration);
-        if (bodyRef.current) {
-          const vel = bodyRef.current.linvel();
-          bodyRef.current.setLinvel({ x: 0, y: vel.y, z: 0 }, true);
-        }
+        setTimeout(() => {
+          if (bodyRef.current) {
+            bodyRef.current.setLinvel({ x: -forwardDir.x * 35, y: currentYVel, z: -forwardDir.z * 35 }, true);
+          }
+        }, 10);
         stunnedUntil.current = now + 3000;
         stunState.current = "FALL";
       } else if (severity === "medium") {
         triggerShake(shakeConfigRef.current.mediumIntensity, shakeConfigRef.current.mediumDuration);
+        setTimeout(() => {
+          if (bodyRef.current) {
+            bodyRef.current.setLinvel({ x: -forwardDir.x * 25, y: currentYVel, z: -forwardDir.z * 25 }, true);
+          }
+        }, 10);
         stunnedUntil.current = now + 1500;
         stunState.current = "STUMBLE";
-        if (bodyRef.current) {
-          const vel = bodyRef.current.linvel();
-          bodyRef.current.setLinvel({ x: vel.x * 0.2, y: vel.y, z: vel.z * 0.2 }, true);
-        }
       } else {
         triggerShake(shakeConfigRef.current.minorIntensity, shakeConfigRef.current.minorDuration);
+        setTimeout(() => {
+          if (bodyRef.current) {
+            bodyRef.current.setLinvel({ x: -forwardDir.x * 15, y: currentYVel, z: -forwardDir.z * 15 }, true);
+          }
+        }, 10);
         stunnedUntil.current = now + 1000;
         stunState.current = "STUMBLE";
-        if (bodyRef.current) {
-          const vel = bodyRef.current.linvel();
-          bodyRef.current.setLinvel({ x: vel.x * 0.5, y: vel.y, z: vel.z * 0.5 }, true);
-        }
       }
     } else if (source === "PLAYER_KICK") {
       // Violent sideways/multi-axis shake for getting kicked by a player
