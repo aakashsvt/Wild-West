@@ -607,7 +607,7 @@ export default function Game() {
       </div>
 
       <KeyboardControls map={keyboardMap}>
-        <Canvas shadows camera={{ position: [0, 5, 10], fov: 60 }} gl={{
+        <Canvas shadows camera={{ position: [0, 5, 10], fov: 60, near: 0.05 }} gl={{
           toneMapping: THREE.LinearToneMapping,
           outputColorSpace: THREE.SRGBColorSpace,
           toneMappingExposure: 1

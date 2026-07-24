@@ -85,7 +85,7 @@ export const Model42 = forwardRef((props, ref) => {
         <group name="saddle_rig">
           <primitive object={nodes.c_pos_1} />
           <primitive object={nodes.root_refx_1} />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="saddle_seat"
             geometry={nodes.saddle_seat.geometry}
             material={materials.Horse_Outfit_Baked}
@@ -103,86 +103,86 @@ export const Model42 = forwardRef((props, ref) => {
           <primitive object={nodes.c_hand_ikr} />
           <primitive object={nodes.c_hand_ikl} />
           <primitive object={nodes.root_refx_2} />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Bandage002"
             geometry={nodes.Bandage002.geometry}
             material={materials.CowboyOutfit}
             skeleton={nodes.Bandage002.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Belt002"
             geometry={nodes.Belt002.geometry}
             material={materials.CowboyOutfit}
             skeleton={nodes.Belt002.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Boot002"
             geometry={nodes.Boot002.geometry}
             material={materials.CowboyOutfit}
             skeleton={nodes.Boot002.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Hair_cap002"
             geometry={nodes.Hair_cap002.geometry}
             material={materials.Cowboy_Skin_Hairs}
             skeleton={nodes.Hair_cap002.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Hair_cut002"
             geometry={nodes.Hair_cut002.geometry}
             material={materials.CowboyHairs}
             skeleton={nodes.Hair_cut002.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Hat002"
             geometry={nodes.Hat002.geometry}
             material={materials.CowboyOutfit}
             skeleton={nodes.Hat002.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Holster002"
             geometry={nodes.Holster002.geometry}
             material={materials.CowboyOutfit}
             skeleton={nodes.Holster002.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Jacket_Optimized002"
             geometry={nodes.Jacket_Optimized002.geometry}
             material={materials.CowboyOutfit}
             skeleton={nodes.Jacket_Optimized002.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Jeans002"
             geometry={nodes.Jeans002.geometry}
             material={materials.CowboyOutfit}
             skeleton={nodes.Jeans002.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Plane002"
             geometry={nodes.Plane002.geometry}
             material={nodes.Plane002.material}
             skeleton={nodes.Plane002.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="SB_sidestepd005"
             geometry={nodes.SB_sidestepd005.geometry}
             material={materials.Cowboy_Skin_Hairs}
             skeleton={nodes.SB_sidestepd005.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Scarf002"
             geometry={nodes.Scarf002.geometry}
             material={materials.CowboyOutfit}
             skeleton={nodes.Scarf002.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Shirt_Optimized_2002"
             geometry={nodes.Shirt_Optimized_2002.geometry}
             material={materials.CowboyOutfit}
             skeleton={nodes.Shirt_Optimized_2002.skeleton}
           />
           <group name="eye_brow002">
-            <skinnedMesh
+            <skinnedMesh frustumCulled={false}
               name="eye_browR002"
               geometry={nodes.eye_browR002.geometry}
               material={materials.SBM_eye_browL}
@@ -190,7 +190,7 @@ export const Model42 = forwardRef((props, ref) => {
               morphTargetDictionary={nodes.eye_browR002.morphTargetDictionary}
               morphTargetInfluences={nodes.eye_browR002.morphTargetInfluences}
             />
-            <skinnedMesh
+            <skinnedMesh frustumCulled={false}
               name="eye_browR002_1"
               geometry={nodes.eye_browR002_1.geometry}
               material={materials.SBM_eye_browR}
@@ -199,7 +199,7 @@ export const Model42 = forwardRef((props, ref) => {
               morphTargetInfluences={nodes.eye_browR002_1.morphTargetInfluences}
             />
           </group>
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="eye_iris002"
             geometry={nodes.eye_iris002.geometry}
             material={materials.Cowboy_Skin_Hairs}
@@ -207,7 +207,7 @@ export const Model42 = forwardRef((props, ref) => {
             morphTargetDictionary={nodes.eye_iris002.morphTargetDictionary}
             morphTargetInfluences={nodes.eye_iris002.morphTargetInfluences}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Michael_head002"
             geometry={nodes.Michael_head002.geometry}
             material={materials.Cowboy_Skin_Hairs}
@@ -215,7 +215,7 @@ export const Model42 = forwardRef((props, ref) => {
             morphTargetDictionary={nodes.Michael_head002.morphTargetDictionary}
             morphTargetInfluences={nodes.Michael_head002.morphTargetInfluences}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Raincoat004"
             geometry={nodes.Raincoat004.geometry}
             material={materials.CowboyOutfit}
@@ -223,7 +223,7 @@ export const Model42 = forwardRef((props, ref) => {
             morphTargetDictionary={nodes.Raincoat004.morphTargetDictionary}
             morphTargetInfluences={nodes.Raincoat004.morphTargetInfluences}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="SB_sidestepd006"
             geometry={nodes.SB_sidestepd006.geometry}
             material={materials.Cowboy_Skin_Hairs}
@@ -231,7 +231,7 @@ export const Model42 = forwardRef((props, ref) => {
             morphTargetDictionary={nodes.SB_sidestepd006.morphTargetDictionary}
             morphTargetInfluences={nodes.SB_sidestepd006.morphTargetInfluences}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="SB_sidestepd007"
             geometry={nodes.SB_sidestepd007.geometry}
             material={materials.Cowboy_Skin_Hairs}
@@ -240,7 +240,7 @@ export const Model42 = forwardRef((props, ref) => {
             morphTargetInfluences={nodes.SB_sidestepd007.morphTargetInfluences}
           />
           <group name="SB_sidestepd008">
-            <skinnedMesh
+            <skinnedMesh frustumCulled={false}
               name="eye_cornea004"
               geometry={nodes.eye_cornea004.geometry}
               material={materials.Cowboy_Skin_Hairs}
@@ -248,7 +248,7 @@ export const Model42 = forwardRef((props, ref) => {
               morphTargetDictionary={nodes.eye_cornea004.morphTargetDictionary}
               morphTargetInfluences={nodes.eye_cornea004.morphTargetInfluences}
             />
-            <skinnedMesh
+            <skinnedMesh frustumCulled={false}
               name="eye_cornea004_1"
               geometry={nodes.eye_cornea004_1.geometry}
               material={materials.eyes_cornea_blind}
@@ -261,7 +261,7 @@ export const Model42 = forwardRef((props, ref) => {
               }
             />
           </group>
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="SB_sidestepd009"
             geometry={nodes.SB_sidestepd009.geometry}
             material={materials.Cowboy_Skin_Hairs}
@@ -269,7 +269,7 @@ export const Model42 = forwardRef((props, ref) => {
             morphTargetDictionary={nodes.SB_sidestepd009.morphTargetDictionary}
             morphTargetInfluences={nodes.SB_sidestepd009.morphTargetInfluences}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Tongue_1002"
             geometry={nodes.Tongue_1002.geometry}
             material={materials.Cowboy_Skin_Hairs}
@@ -298,31 +298,31 @@ export const Model42 = forwardRef((props, ref) => {
           <primitive object={nodes.eye_offset_refr} />
           <primitive object={nodes.bot_bend_refl} />
           <primitive object={nodes.bot_bend_refr} />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="belt_head"
             geometry={nodes.belt_head.geometry}
             material={materials.Horse_Outfit_Baked}
             skeleton={nodes.belt_head.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="eyel"
             geometry={nodes.eyel.geometry}
             material={materials["Horse.001"]}
             skeleton={nodes.eyel.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="eyer"
             geometry={nodes.eyer.geometry}
             material={materials["Horse.001"]}
             skeleton={nodes.eyer.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="horse_hair"
             geometry={nodes.horse_hair.geometry}
             material={materials.HorseHairs_Baked}
             skeleton={nodes.horse_hair.skeleton}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="belt_saddle"
             geometry={nodes.belt_saddle.geometry}
             material={materials.Horse_Outfit_Baked}
@@ -330,7 +330,7 @@ export const Model42 = forwardRef((props, ref) => {
             morphTargetDictionary={nodes.belt_saddle.morphTargetDictionary}
             morphTargetInfluences={nodes.belt_saddle.morphTargetInfluences}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Horse_Body"
             geometry={nodes.Horse_Body.geometry}
             material={materials.HorseBaked}
@@ -338,7 +338,7 @@ export const Model42 = forwardRef((props, ref) => {
             morphTargetDictionary={nodes.Horse_Body.morphTargetDictionary}
             morphTargetInfluences={nodes.Horse_Body.morphTargetInfluences}
           />
-          <skinnedMesh
+          <skinnedMesh frustumCulled={false}
             name="Horse_TAIL"
             geometry={nodes.Horse_TAIL.geometry}
             material={materials.HorseHairs_Baked}
