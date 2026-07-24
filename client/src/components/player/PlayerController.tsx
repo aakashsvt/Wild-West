@@ -274,7 +274,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
     updateCamera(
       delta, body.current, isFirstPersonRef.current,
       mouseYawOffset.current, mousePitchOffset.current,
-      forwardDir, currentSpeed, horseRef, keys.run
+      forwardDir, currentSpeed, horseRef, keys.run && keys.forward
     );
 
     updateNetwork(
