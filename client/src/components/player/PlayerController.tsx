@@ -41,6 +41,7 @@ import { usePlayerAnimations } from './usePlayerAnimations';
 import { usePlayerNetwork } from './usePlayerNetwork';
 import { useControls, button } from "leva";
 import { usePlayerStateMachine } from './usePlayerStateMachine';
+import { usePlayerImpacts } from './usePlayerImpacts';
 type Props = {
   playerRef: React.MutableRefObject<RapierRigidBody | null>;
   isFirstPersonRef: React.MutableRefObject<boolean>;
@@ -163,38 +164,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
     camera.lookAt(initialTarget);
   }, [camera, startTransform]);
 
-  // Listen for remote player state updates to detect when nearby remotes are kicking
-  const handleRemotePlayerState = useCallback((state: RacePlayerState) => {
-    if (!body.current) return;
 
-    // Only care if the remote has a kick overlay
-    if (!state.overlay) return;
-
-    // Check distance from local player to remote player
-    const localPos = body.current.translation();
-    const remotePos = new Vector3(
-      state.position[0],
-      state.position[1],
-      state.position[2],
-    );
-    const distance = Math.hypot(
-      localPos.x - remotePos.x,
-      localPos.y - remotePos.y,
-      localPos.z - remotePos.z,
-    );
-
-    // If remote is within kick range (~10 units), stun the local player
-    const KICK_RANGE = 10;
-    if (distance < KICK_RANGE) {
-      stunnedUntil.current = performance.now() + 2000;
-      stunState.current = "KICKED";
-      console.log(
-        `aaaaa[LOCAL STUN] Remote player at distance ${distance.toFixed(1)} is kicking, local player stunned`,
-      );
-    }
-  }, []);
-
-  useSocketEvent("race:player-state", handleRemotePlayerState);
 
 
   const { updateMovement } = usePlayerMovement(setSpeed, addScore);
@@ -223,38 +193,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
   const { updateStateMachine, transitioningToRun, walk2RunStartedAt } = usePlayerStateMachine(playAnimation);
 
 
-  useEffect(() => {
-    const handleHazard = (e: any) => {
-      const { severity } = e.detail;
-      if (severity === "major") {
-        triggerShake(shakeConfigRef.current.majorIntensity, shakeConfigRef.current.majorDuration);
-        if (body.current) {
-          const vel = body.current.linvel();
-          body.current.setLinvel({ x: 0, y: vel.y, z: 0 }, true);
-        }
-        stunnedUntil.current = performance.now() + 3000;
-        stunState.current = "FALL";
-      } else if (severity === "medium") {
-        triggerShake(shakeConfigRef.current.mediumIntensity, shakeConfigRef.current.mediumDuration);
-        stunnedUntil.current = performance.now() + 1500;
-        stunState.current = "STUMBLE";
-        if (body.current) {
-          const vel = body.current.linvel();
-          body.current.setLinvel({ x: vel.x * 0.2, y: vel.y, z: vel.z * 0.2 }, true);
-        }
-      } else {
-        triggerShake(shakeConfigRef.current.minorIntensity, shakeConfigRef.current.minorDuration);
-        stunnedUntil.current = performance.now() + 1000;
-        stunState.current = "STUMBLE";
-        if (body.current) {
-          const vel = body.current.linvel();
-          body.current.setLinvel({ x: vel.x * 0.5, y: vel.y, z: vel.z * 0.5 }, true);
-        }
-      }
-    };
-    window.addEventListener("hazard-impact", handleHazard);
-    return () => window.removeEventListener("hazard-impact", handleHazard);
-  }, [triggerShake]);
+  usePlayerImpacts(body, stunnedUntil, stunState, triggerShake, shakeConfigRef);
 
   useFrame((state, delta) => {
     if (!body.current || !isPlaying) return;
