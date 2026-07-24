@@ -240,7 +240,15 @@ export function PostProcessingPipeline({ playerRef, isFirstPersonRef }: Props) {
   // Listen for physical impacts to trigger the post-processing glitch and color drain
   useEffect(() => {
     const onHazard = (e: any) => {
-      const vel = e.detail?.impactVelocity || 0;
+      const { impactVelocity: vel, impactAngle } = e.detail;
+      
+      if (impactAngle === "side-swipe") {
+        chromaticIntensity.current = 0.03; // Tiny micro-glitch
+        // No color drain on a side-swipe
+        return;
+      }
+      
+      // Head-on collisions get the massive effect
       if (vel >= 45) {
         chromaticIntensity.current = 0.10; // Subtle peak
         currentSaturation.current = 0.15; // Massive color drain (almost black & white)
