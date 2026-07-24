@@ -13,14 +13,17 @@ export type ImpactSource = "ENVIRONMENT" | "PLAYER_KICK";
 export function usePlayerImpacts(
   bodyRef: React.MutableRefObject<RapierRigidBody | null>,
   stunnedUntil: React.MutableRefObject<number>,
+  hitStopUntil: React.MutableRefObject<number>,
   stunState: React.MutableRefObject<"NONE" | "FALL" | "STUMBLE" | "KICKED">,
   triggerShake: (intensity: number, duration: number) => void,
   shakeConfigRef: React.MutableRefObject<any>
 ) {
 
-  const thresholdControls = useControls("Impact Thresholds", {
+  const thresholdControls = useControls("Impact Thresholds & Time Dilation", {
     minorSpeed: { value: 20, min: 1, max: 100, step: 1 },
     majorSpeed: { value: 45, min: 1, max: 200, step: 1 },
+    hitStopMajorMs: { value: 250, min: 0, max: 1000, step: 10 },
+    hitStopMediumMs: { value: 100, min: 0, max: 1000, step: 10 },
   });
   const thresholdsRef = useRef(thresholdControls);
   thresholdsRef.current = thresholdControls;
@@ -45,21 +48,29 @@ export function usePlayerImpacts(
       }
 
       if (severity === "major") {
+        const hitStopDuration = thresholdsRef.current.hitStopMajorMs; // Configurable freeze
+        hitStopUntil.current = now + hitStopDuration;
         triggerShake(shakeConfigRef.current.majorIntensity, shakeConfigRef.current.majorDuration);
+        
+        // Wait for the Hit-Stop freeze to end before applying the massive backwards recoil impulse
         setTimeout(() => {
           if (bodyRef.current) {
             bodyRef.current.setLinvel({ x: -forwardDir.x * 35, y: currentYVel, z: -forwardDir.z * 35 }, true);
           }
-        }, 10);
+        }, hitStopDuration);
+        
         stunnedUntil.current = now + 3000;
         stunState.current = "FALL";
       } else if (severity === "medium") {
+        const hitStopDuration = thresholdsRef.current.hitStopMediumMs; // Configurable freeze
+        hitStopUntil.current = now + hitStopDuration;
         triggerShake(shakeConfigRef.current.mediumIntensity, shakeConfigRef.current.mediumDuration);
+        
         setTimeout(() => {
           if (bodyRef.current) {
             bodyRef.current.setLinvel({ x: -forwardDir.x * 25, y: currentYVel, z: -forwardDir.z * 25 }, true);
           }
-        }, 10);
+        }, hitStopDuration);
         stunnedUntil.current = now + 1500;
         stunState.current = "STUMBLE";
       } else {

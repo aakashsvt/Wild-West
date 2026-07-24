@@ -143,6 +143,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
   const lastPosition = useRef(new Vector3());
   const proximityContacts = useRef<Set<string>>(new Set());
   const stunnedUntil = useRef<number>(0);
+  const hitStopUntil = useRef<number>(0);
   const stunState = useRef<"NONE" | "FALL" | "STUMBLE" | "KICKED">("NONE");
 
   useEffect(() => {
@@ -193,7 +194,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
   const { updateStateMachine, transitioningToRun, walk2RunStartedAt } = usePlayerStateMachine(playAnimation);
 
 
-  usePlayerImpacts(body, stunnedUntil, stunState, triggerShake, shakeConfigRef);
+  usePlayerImpacts(body, stunnedUntil, hitStopUntil, stunState, triggerShake, shakeConfigRef);
 
   useFrame((state, delta) => {
     if (!body.current || !isPlaying) return;
@@ -204,6 +205,26 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
     const currentStunState = isStunned ? stunState.current : "NONE";
     const keys = getKeys();
     const isBoosting = keys.forward && keys.boost;
+
+    // ==========================================
+    // HIT-STOP (TIME DILATION)
+    // ==========================================
+    if (now < hitStopUntil.current) {
+      // Freeze Physics exactly in place
+      body.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      
+      // Freeze Animations
+      if (horseRef.current?.mixer) {
+        horseRef.current.mixer.timeScale = 0;
+      }
+      // Skip the rest of the movement and state machine updates for this frame
+      return; 
+    } else {
+      // Restore Animation flow once Hit-Stop ends
+      if (horseRef.current?.mixer && horseRef.current.mixer.timeScale === 0) {
+        horseRef.current.mixer.timeScale = 1;
+      }
+    }
 
     if (keys.toggleView && !toggleViewWasDown.current) {
       isFirstPersonRef.current = !isFirstPersonRef.current;

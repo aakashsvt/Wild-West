@@ -27,7 +27,7 @@ export const Model42 = forwardRef((props, ref) => {
     [animations],
   );
   const { nodes, materials } = useGraph(clone);
-  const { actions } = useAnimations(localAnimations, group);
+  const { actions, mixer } = useAnimations(localAnimations, group);
   const hoofBones = React.useMemo(() => {
     const skeleton = nodes.Horse_Body?.skeleton;
     if (!skeleton) return [];
@@ -47,6 +47,7 @@ export const Model42 = forwardRef((props, ref) => {
   }, [nodes]);
   useImperativeHandle(ref, () => ({
     actions,
+    mixer,
     hoofBones,
     horseHeadBone,
   }));

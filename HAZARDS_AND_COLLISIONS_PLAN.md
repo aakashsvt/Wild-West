@@ -83,7 +83,8 @@ As of the current implementation, we have successfully architected and built the
 
 ### Next Steps
 The core foundational collision, stun state machine, and physical recoil systems are **100% complete**. 
-The next objectives focus purely on adding ""juice"" and game-feel polish:
-1. **Hit-Stop (Time Dilation)**: Adding a brief micro-pause upon impact to make hits feel incredibly heavy.
-2. **Particle VFX**: Spawning dust/wood debris upon collision.
-3. **SFX Audio**: Layering in appropriate sound effects.
+The next objectives focus purely on adding "juice" and game-feel polish:
+1. **Hit-Stop (Time Dilation)**: Adding a brief micro-pause (engine freeze) upon impact to make hits feel incredibly heavy before the recoil triggers.
+2. **Post-Processing (Hallucination)**: Using `@react-three/postprocessing` to trigger a violent Chromatic Aberration / RGB split glitch effect on the camera lens during major collisions.
+3. **Particle VFX**: Spawning dust/wood debris upon collision.
+4. **SFX Audio**: Layering in appropriate sound effects.
