@@ -81,10 +81,15 @@ As of the current implementation, we have successfully architected and built the
 - **Reverse Animations & TimeScale Manipulation**: Upgraded usePlayerAnimations.ts to accept mathematical 	imeScale parameters. We completely removed the static forward stumble animation (which clipped into walls) and replaced it with a physics-driven, reverse-walk animation (	imeScale = -1.5) that perfectly syncs with the physical recoil. This is also applied when the player naturally holds the S (Backward) key.
 - **Centralized Constants**: Extracted all physics multipliers, stun durations, and animation speeds out of component logic into properly named, modular constants in constants.ts.
 
+- **Hit-Stop (Time Dilation)**: Implemented an engine-level freeze frame upon impact. The `PlayerController` intercepts the `useFrame` loop, zeroes out the `Rapier` rigid body velocity, and halts the `AnimationMixer` via an exposed `useImperativeHandle` from the GLTF component. The physical recoil bounce is delayed until the hit-stop timer resolves.
+- **Hit-Stop Leva Controls**: Added configurable time-dilation durations (e.g. 250ms for major, 100ms for medium) to the UI so developers can live-tune the kinesthetic weight of the crash.
+- **Bug Fix - Camera Near Clipping**: Decreased the `<Canvas>` camera `near` plane to `0.05` to prevent the horse mesh from getting sliced when backing up directly into the lens.
+- **Bug Fix - Skinned Mesh Frustum Culling**: Selectively applied `frustumCulled={false}` to the `Jeans002` and `Boot002` sub-meshes to prevent the rider's legs from popping out of existence during the reverse-walk animation, preserving overall performance for remote players.
+- **Bug Fix - Camera Sprint Offset**: Updated `PlayerController` to restrict the third-person zoom-out effect to `keys.run && keys.forward`, preventing awkward camera snaps when pressing Shift while standing still.
+
 ### Next Steps
-The core foundational collision, stun state machine, and physical recoil systems are **100% complete**. 
+The core foundational collision, stun state machine, physical recoil systems, and hit-stop dilation are **100% complete**. 
 The next objectives focus purely on adding "juice" and game-feel polish:
-1. **Hit-Stop (Time Dilation)**: Adding a brief micro-pause (engine freeze) upon impact to make hits feel incredibly heavy before the recoil triggers.
-2. **Post-Processing (Hallucination)**: Using `@react-three/postprocessing` to trigger a violent Chromatic Aberration / RGB split glitch effect on the camera lens during major collisions.
-3. **Particle VFX**: Spawning dust/wood debris upon collision.
-4. **SFX Audio**: Layering in appropriate sound effects.
+1. **Post-Processing (Hallucination)**: Using `@react-three/postprocessing` to trigger a violent Chromatic Aberration / RGB split glitch effect on the camera lens during major collisions.
+2. **Particle VFX**: Spawning dust/wood debris upon collision.
+3. **SFX Audio**: Layering in appropriate sound effects.
