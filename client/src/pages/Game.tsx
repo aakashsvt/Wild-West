@@ -20,6 +20,7 @@ import { getSocket, useSocketEvent } from "@/hooks/use-socket";
 import { Loader2 } from "lucide-react";
 import { Link, Redirect } from "wouter";
 import { PostProcessingPipeline } from "@/components/PostProcessingPipeline";
+import { DamageOverlay } from "@/components/DamageOverlay";
 
 // ── Western palette — matches Home and LoadingScreen ─────────────────────────
 const W = {
@@ -274,6 +275,7 @@ export default function Game() {
 
   return (
     <div className="w-full h-screen bg-[#0a0603] overflow-hidden relative">
+      <DamageOverlay />
       <GameHUD />
       <GameOverModal />
       <TouchControls />
