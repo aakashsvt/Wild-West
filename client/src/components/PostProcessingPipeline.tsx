@@ -237,6 +237,19 @@ export function PostProcessingPipeline({ playerRef, isFirstPersonRef }: Props) {
   const chromaticIntensity = useRef(0)
   const currentSaturation = useRef(0.96) // Base western look saturation
 
+  // Sync with the same thresholds used in usePlayerImpacts.ts
+  const { minorSpeed, majorSpeed } = useControls("Impact Thresholds & Time Dilation", {
+    minorSpeed: { value: 20, min: 1, max: 100, step: 1 },
+    majorSpeed: { value: 45, min: 1, max: 200, step: 1 },
+    hitStopMajorMs: { value: 250, min: 0, max: 1000, step: 10 },
+    hitStopMediumMs: { value: 100, min: 0, max: 1000, step: 10 },
+  });
+
+  const minSpeedRef = useRef(minorSpeed);
+  const majSpeedRef = useRef(majorSpeed);
+  minSpeedRef.current = minorSpeed;
+  majSpeedRef.current = majorSpeed;
+
   // Listen for physical impacts to trigger the post-processing glitch and color drain
   useEffect(() => {
     const onHazard = (e: any) => {
@@ -257,10 +270,10 @@ export function PostProcessingPipeline({ playerRef, isFirstPersonRef }: Props) {
       }
       
       // Head-on or diagonal-front collisions get the massive effect
-      if (vel >= 45) {
+      if (vel >= majSpeedRef.current) {
         chromaticIntensity.current = 0.10; // Subtle peak
         currentSaturation.current = 0.15; // Massive color drain (almost black & white)
-      } else if (vel >= 20) {
+      } else if (vel >= minSpeedRef.current) {
         chromaticIntensity.current = 0.04; // Very light peak
         currentSaturation.current = 0.50; // Moderate color drain
       }

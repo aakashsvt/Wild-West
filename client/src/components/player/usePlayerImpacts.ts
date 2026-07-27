@@ -28,7 +28,7 @@ export function usePlayerImpacts(
   const thresholdsRef = useRef(thresholdControls);
   thresholdsRef.current = thresholdControls;
 
-  const triggerStun = useCallback((severity: ImpactSeverity, source: ImpactSource) => {
+  const triggerStun = useCallback((severity: ImpactSeverity, source: ImpactSource, impactAngle: string = "main-body") => {
     const now = performance.now();
     const isCurrentlyFalling = stunState.current === "FALL" && stunnedUntil.current > now;
     
@@ -47,16 +47,26 @@ export function usePlayerImpacts(
           currentYVel = bodyRef.current.linvel().y;
       }
 
+      const isFrontal = impactAngle === "sensor-front" || 
+                        impactAngle === "sensor-front-left" || 
+                        impactAngle === "sensor-front-right" || 
+                        impactAngle === "main-body";
+
       // HEAD-ON CRASH LOGIC
       if (severity === "major") {
         const hitStopDuration = thresholdsRef.current.hitStopMajorMs; // Configurable freeze
         hitStopUntil.current = now + hitStopDuration;
         triggerShake(shakeConfigRef.current.majorIntensity, shakeConfigRef.current.majorDuration);
         
-        // Wait for the Hit-Stop freeze to end before applying the massive backwards recoil impulse
+        // Wait for the Hit-Stop freeze to end before applying the recoil impulse
         setTimeout(() => {
           if (bodyRef.current) {
-            bodyRef.current.setLinvel({ x: -forwardDir.x * 35, y: currentYVel, z: -forwardDir.z * 35 }, true);
+            if (isFrontal) {
+              bodyRef.current.setLinvel({ x: -forwardDir.x * 35, y: currentYVel, z: -forwardDir.z * 35 }, true);
+            } else {
+              const currentVel = bodyRef.current.linvel();
+              bodyRef.current.setLinvel({ x: currentVel.x * 0.2, y: currentYVel, z: currentVel.z * 0.2 }, true);
+            }
           }
         }, hitStopDuration);
         
@@ -69,7 +79,12 @@ export function usePlayerImpacts(
         
         setTimeout(() => {
           if (bodyRef.current) {
-            bodyRef.current.setLinvel({ x: -forwardDir.x * 25, y: currentYVel, z: -forwardDir.z * 25 }, true);
+            if (isFrontal) {
+              bodyRef.current.setLinvel({ x: -forwardDir.x * 25, y: currentYVel, z: -forwardDir.z * 25 }, true);
+            } else {
+              const currentVel = bodyRef.current.linvel();
+              bodyRef.current.setLinvel({ x: currentVel.x * 0.5, y: currentYVel, z: currentVel.z * 0.5 }, true);
+            }
           }
         }, hitStopDuration);
         stunnedUntil.current = now + 1500;
@@ -78,7 +93,12 @@ export function usePlayerImpacts(
         triggerShake(shakeConfigRef.current.minorIntensity, shakeConfigRef.current.minorDuration);
         setTimeout(() => {
           if (bodyRef.current) {
-            bodyRef.current.setLinvel({ x: -forwardDir.x * 15, y: currentYVel, z: -forwardDir.z * 15 }, true);
+            if (isFrontal) {
+              bodyRef.current.setLinvel({ x: -forwardDir.x * 15, y: currentYVel, z: -forwardDir.z * 15 }, true);
+            } else {
+              const currentVel = bodyRef.current.linvel();
+              bodyRef.current.setLinvel({ x: currentVel.x * 0.8, y: currentYVel, z: currentVel.z * 0.8 }, true);
+            }
           }
         }, 10);
         stunnedUntil.current = now + 1000;
@@ -143,7 +163,7 @@ export function usePlayerImpacts(
       }
 
       console.log(`[IMPACT MANAGER] Processed severity: ${severity}`);
-      triggerStun(severity, "ENVIRONMENT");
+      triggerStun(severity, "ENVIRONMENT", impactAngle);
     };
     
     window.addEventListener("hazard-impact", handleImpact);
