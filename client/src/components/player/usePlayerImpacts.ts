@@ -9,7 +9,6 @@ import { useRef } from "react";
 
 export type ImpactSeverity = "minor" | "medium" | "major";
 export type ImpactSource = "ENVIRONMENT" | "PLAYER_KICK";
-export type ImpactAngle = "head-on" | "side-swipe" | "rear-end";
 
 export function usePlayerImpacts(
   bodyRef: React.MutableRefObject<RapierRigidBody | null>,
@@ -29,7 +28,7 @@ export function usePlayerImpacts(
   const thresholdsRef = useRef(thresholdControls);
   thresholdsRef.current = thresholdControls;
 
-  const triggerStun = useCallback((severity: ImpactSeverity, source: ImpactSource, angle: ImpactAngle = "head-on") => {
+  const triggerStun = useCallback((severity: ImpactSeverity, source: ImpactSource) => {
     const now = performance.now();
     const isCurrentlyFalling = stunState.current === "FALL" && stunnedUntil.current > now;
     
@@ -48,22 +47,6 @@ export function usePlayerImpacts(
           currentYVel = bodyRef.current.linvel().y;
       }
 
-      if (angle === "side-swipe") {
-        // SIDE SWIPE: Flinch/Stumble, tiny speed loss, NO hit-stop freeze!
-        triggerShake(shakeConfigRef.current.mediumIntensity, shakeConfigRef.current.mediumDuration);
-        
-        if (bodyRef.current) {
-          const vel = bodyRef.current.linvel();
-          // Slow down by 30% but keep moving forward
-          bodyRef.current.setLinvel({ x: vel.x * 0.7, y: vel.y, z: vel.z * 0.7 }, true);
-        }
-        
-        // Short stumble animation
-        stunnedUntil.current = now + 800;
-        stunState.current = "STUMBLE";
-        return;
-      }
-      
       // HEAD-ON CRASH LOGIC
       if (severity === "major") {
         const hitStopDuration = thresholdsRef.current.hitStopMajorMs; // Configurable freeze
@@ -117,7 +100,7 @@ export function usePlayerImpacts(
   // 1. Listen for Hazards (Cubes/Fences)
   useEffect(() => {
     const handleHazard = (e: any) => {
-      const { impactVelocity, impactAngle } = e.detail;
+      const { impactVelocity } = e.detail;
       
       let severity: ImpactSeverity = "minor";
       if (impactVelocity >= thresholdsRef.current.majorSpeed) {
@@ -126,8 +109,8 @@ export function usePlayerImpacts(
         severity = "medium";
       }
 
-      console.log(`[IMPACT MANAGER] Processed severity: ${severity} (Angle: ${impactAngle})`);
-      triggerStun(severity, "ENVIRONMENT", impactAngle);
+      console.log(`[IMPACT MANAGER] Processed severity: ${severity}`);
+      triggerStun(severity, "ENVIRONMENT");
     };
     window.addEventListener("hazard-impact", handleHazard);
     return () => window.removeEventListener("hazard-impact", handleHazard);
