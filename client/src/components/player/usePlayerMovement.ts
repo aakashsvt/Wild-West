@@ -25,7 +25,7 @@ export function usePlayerMovement(
     delta: number,
     rb: RapierRigidBody,
     inputs: PlayerInputs,
-    stunState: "NONE" | "FALL" | "STUMBLE" | "KICKED",
+    stunState: "NONE" | "FALL" | "STUMBLE" | "STUMBLE_SIDE" | "KICKED",
     stunnedUntil: number,
     lastPosition: MutableRefObject<Vector3>
   ) => {

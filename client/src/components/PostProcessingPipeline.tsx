@@ -255,6 +255,12 @@ export function PostProcessingPipeline({ playerRef, isFirstPersonRef }: Props) {
     const onHazard = (e: any) => {
       const { impactVelocity: vel, impactAngle } = e.detail;
       
+      if (impactAngle === "hurdle") {
+        // Absolutely NO post-processing effects for hurdles (no RGB shift, no black screen)
+        // Hurdles only trigger physical camera shake via usePlayerImpacts.ts
+        return;
+      }
+
       if (
         impactAngle === "sensor-left" || 
         impactAngle === "sensor-right" || 
@@ -265,7 +271,7 @@ export function PostProcessingPipeline({ playerRef, isFirstPersonRef }: Props) {
         impactAngle === "rear-end"
       ) {
         chromaticIntensity.current = 0.03; // Tiny micro-glitch
-        // No color drain on a side-swipe or rear hit
+        // No color drain on a side-swipe, rear hit, or hurdle crash
         return;
       }
       

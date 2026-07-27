@@ -12,6 +12,7 @@ import * as THREE from 'three'
 import trackPoints from '../../public/models/spline.json'
 import { withKTX2 } from '../lib/ktx2-loader'
 import { ObstacleSpawner } from './ObstacleSpawner'
+import { HurdleSpawner } from './HurdleSpawner'
 const points = trackPoints.map(
   (p) => new THREE.Vector3(p.x, p.y, p.z)
 );
@@ -225,6 +226,7 @@ export function Model(props: ModelProps) {
 
     <Walls />
     <ObstacleSpawner />
+    <HurdleSpawner />
   </>
   )
 }

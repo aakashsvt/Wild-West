@@ -52,7 +52,7 @@ export function usePlayerStateMachine(
   const updateStateMachine = (
     now: number,
     inputs: PlayerInputs,
-    stunState: "NONE" | "FALL" | "STUMBLE" | "KICKED",
+    stunState: "NONE" | "FALL" | "STUMBLE" | "STUMBLE_SIDE" | "KICKED",
     currentSpeed: number,
     currentAnimationName: string
   ) => {
@@ -128,6 +128,9 @@ export function usePlayerStateMachine(
         } else {
           targetBaseState = PlayerState.IDLE;
         }
+      } else if (stunState === "STUMBLE_SIDE") {
+        targetBaseState = PlayerState.STUMBLE; // Play the actual STUMBLE animation clip!
+        targetTimeScale = 1.0; // Play it at normal speed
       } else {
         targetBaseState = PlayerState.IDLE; // "KICKED" falls back to IDLE unless we have a hit animation
       }

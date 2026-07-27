@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { KeyboardControls, Environment, OrbitControls, Stars, Stats } from "@react-three/drei";
 import { Suspense, useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useControls } from "leva";
 
 import type { RapierRigidBody } from "@react-three/rapier"
 import { PlayerController } from "@/components/player/PlayerController";
@@ -214,6 +215,10 @@ export default function Game() {
   const playerRef = useRef<RapierRigidBody | null>(null)
   const isFirstPersonRef = useRef(false)
 
+  const { enableOrbitControls } = useControls("Debug", {
+    enableOrbitControls: false
+  });
+
   const { score, timeElapsed, isPlaying, isGameOver } = useGameStore()
   const { roomId, setLobbyState, setStandings, setRaceResults, resetLobby } = useLobbyStore()
 
@@ -297,6 +302,7 @@ export default function Game() {
           outputColorSpace: THREE.SRGBColorSpace,
           toneMappingExposure: 1
         }}>
+          {enableOrbitControls && <OrbitControls />}
           <Stats />
           {/* Second stats.js panel pinned to the MB (JS heap) readout, so
               RAM is always visible instead of only reachable by clicking

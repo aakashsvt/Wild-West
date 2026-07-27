@@ -14,9 +14,11 @@ export function usePlayerImpacts(
   bodyRef: React.MutableRefObject<RapierRigidBody | null>,
   stunnedUntil: React.MutableRefObject<number>,
   hitStopUntil: React.MutableRefObject<number>,
-  stunState: React.MutableRefObject<"NONE" | "FALL" | "STUMBLE" | "KICKED">,
+  stunState: React.MutableRefObject<"NONE" | "FALL" | "STUMBLE" | "STUMBLE_SIDE" | "KICKED">,
   triggerShake: (intensity: number, duration: number) => void,
-  shakeConfigRef: React.MutableRefObject<any>
+  shakeConfigRef: React.MutableRefObject<any>,
+  currentAnimationName: React.MutableRefObject<string>,
+  pendingStumble: React.MutableRefObject<boolean>
 ) {
 
   const thresholdControls = useControls("Impact Thresholds & Time Dilation", {
@@ -51,6 +53,26 @@ export function usePlayerImpacts(
                         impactAngle === "sensor-front-left" || 
                         impactAngle === "sensor-front-right" || 
                         impactAngle === "main-body";
+
+      if (impactAngle === "hurdle") {
+        if (currentAnimationName.current === "JUMP") {
+          // If jumping, just shake camera and queue the stumble for when they land
+          pendingStumble.current = true;
+          triggerShake(shakeConfigRef.current.minorIntensity, shakeConfigRef.current.minorDuration);
+        } else {
+          // If running, stumble immediately and reduce speed
+          stunnedUntil.current = now + 1000;
+          stunState.current = "STUMBLE_SIDE";
+          triggerShake(shakeConfigRef.current.minorIntensity, shakeConfigRef.current.minorDuration);
+          setTimeout(() => {
+            if (bodyRef.current) {
+              const currentVel = bodyRef.current.linvel();
+              bodyRef.current.setLinvel({ x: currentVel.x * 0.8, y: currentYVel, z: currentVel.z * 0.8 }, true);
+            }
+          }, 10);
+        }
+        return; // Skip the rest of the frontal logic
+      }
 
       // HEAD-ON CRASH LOGIC
       if (severity === "major") {

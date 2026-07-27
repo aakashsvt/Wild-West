@@ -147,7 +147,8 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
   const proximityContacts = useRef<Set<string>>(new Set());
   const stunnedUntil = useRef<number>(0);
   const hitStopUntil = useRef<number>(0);
-  const stunState = useRef<"NONE" | "FALL" | "STUMBLE" | "KICKED">("NONE");
+  const stunState = useRef<"NONE" | "FALL" | "STUMBLE" | "STUMBLE_SIDE" | "KICKED">("NONE");
+  const pendingStumble = useRef(false);
 
   useEffect(() => {
     playerRef.current = body.current;
@@ -197,7 +198,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
   const { updateStateMachine, transitioningToRun, walk2RunStartedAt } = usePlayerStateMachine(playAnimation);
 
 
-  usePlayerImpacts(body, stunnedUntil, hitStopUntil, stunState, triggerShake, shakeConfigRef);
+  usePlayerImpacts(body, stunnedUntil, hitStopUntil, stunState, triggerShake, shakeConfigRef, currentAnimationName, pendingStumble);
 
   useFrame((state, delta) => {
     if (!body.current || !isPlaying) return;
@@ -208,6 +209,16 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
     const currentStunState = isStunned ? stunState.current : "NONE";
     const keys = getKeys();
     const isBoosting = keys.forward && keys.boost;
+
+    // ==========================================
+    // DEQUEUE PENDING STUMBLE (After Jump Lands)
+    // ==========================================
+    const isJumping = currentAnimationName.current === "JUMP";
+    if (pendingStumble.current && !isJumping && !isStunned) {
+      pendingStumble.current = false;
+      stunnedUntil.current = now + 1000;
+      stunState.current = "STUMBLE_SIDE";
+    }
 
     // ==========================================
     // HIT-STOP (TIME DILATION)
