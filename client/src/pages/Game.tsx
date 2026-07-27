@@ -21,6 +21,7 @@ import { Loader2 } from "lucide-react";
 import { Link, Redirect } from "wouter";
 import { PostProcessingPipeline } from "@/components/PostProcessingPipeline";
 import { DamageOverlay } from "@/components/DamageOverlay";
+import { ImpactVFXManager } from "@/components/ImpactVFXManager";
 
 // ── Western palette — matches Home and LoadingScreen ─────────────────────────
 const W = {
@@ -318,6 +319,7 @@ export default function Game() {
               <PlayerController playerRef={playerRef} isFirstPersonRef={isFirstPersonRef} />
               <RemotePlayers />
               <Model />
+              <ImpactVFXManager />
               <SceneReadyProbe onReady={handleSceneReady} />
             </Physics>
             <PostProcessingPipeline playerRef={playerRef} isFirstPersonRef={isFirstPersonRef} />

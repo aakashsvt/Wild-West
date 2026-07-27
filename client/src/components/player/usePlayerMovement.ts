@@ -82,7 +82,8 @@ export function usePlayerMovement(
     // =========================
     // 🔁 TURNING (SMOOTH)
     // =========================
-    if (left || right) {
+    // Freeze turning controls if stumbling from a hurdle
+    if ((left || right) && stunState !== "STUMBLE_SIDE") {
       const turnDir = left ? 1 : -1;
       const turnSpeedFactor = THREE.MathUtils.lerp(
         1.2,
@@ -101,21 +102,18 @@ export function usePlayerMovement(
     // 🐎 FORWARD MOVEMENT (SMOOTH)
     // =========================
     let targetSpeed = 0;
-    if (forward) {
-      if (stunState === "STUMBLE_SIDE") {
-        // Player can move forward during a hurdle stumble, but at a noticeably slower speed
-        targetSpeed = WALK_TARGET_SPEED * 0.6;
-      } else {
-        targetSpeed = isBoosting
-          ? MAX_SPEED * BOOST_SPEED_MULTIPLIER
-          : run
-          ? MAX_SPEED
-          : WALK_TARGET_SPEED;
-      }
+    
+    if (stunState === "STUMBLE_SIDE") {
+      // Freeze forward/backward controls: force automatic forward movement
+      targetSpeed = WALK_TARGET_SPEED * 0.6;
+    } else if (forward) {
+      targetSpeed = isBoosting
+        ? MAX_SPEED * BOOST_SPEED_MULTIPLIER
+        : run
+        ? MAX_SPEED
+        : WALK_TARGET_SPEED;
     } else if (backward) {
-      if (stunState !== "STUMBLE_SIDE") {
-        targetSpeed = -WALK_TARGET_SPEED * BACKWARD_WALK_SPEED_MULT;
-      }
+      targetSpeed = -WALK_TARGET_SPEED * BACKWARD_WALK_SPEED_MULT;
     }
 
     const forwardSpeed = _velocity.dot(_forwardDir);
@@ -134,8 +132,7 @@ export function usePlayerMovement(
     const isWalking = (forward || backward) && !run && !isBoosting;
 
     if (stunState === "STUMBLE_SIDE") {
-      // During stumble, directly set the full target velocity.
-      // The normal lerp(0.2) is too weak — Rapier's friction kills the tiny velocity before the next frame.
+      // During stumble, directly set the full target velocity so it coasts forward cleanly.
       const stumbleVelocity = _forwardDir.clone().multiplyScalar(targetSpeed);
       rb.setLinvel({ x: stumbleVelocity.x, y: linvel.y, z: stumbleVelocity.z }, true);
     } else {

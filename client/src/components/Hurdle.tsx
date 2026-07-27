@@ -38,6 +38,7 @@ export function Hurdle({ position, rotation = [0, 0, 0], width = 4, height = 1.2
           detail: {
             impactVelocity: speed,
             impactAngle: "hurdle",
+            hazardPosition: position,
           },
         }),
       );
