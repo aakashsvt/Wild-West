@@ -56,11 +56,13 @@ export function usePlayerMovement(
         rb.setLinvel({ x: velocity.x, y: linvel.y, z: velocity.z }, true);
       }
 
-      return {
-        velocity,
-        currentSpeed,
-        forwardDir
-      };
+      if (stunState !== "STUMBLE_SIDE") {
+        return {
+          velocity,
+          currentSpeed,
+          forwardDir
+        };
+      }
     }
 
     // =========================
@@ -89,13 +91,20 @@ export function usePlayerMovement(
     // =========================
     let targetSpeed = 0;
     if (forward) {
-      targetSpeed = isBoosting
-        ? MAX_SPEED * BOOST_SPEED_MULTIPLIER
-        : run
-        ? MAX_SPEED
-        : WALK_TARGET_SPEED;
+      if (stunState === "STUMBLE_SIDE") {
+        // Player can move forward during a hurdle stumble, but at a noticeably slower speed
+        targetSpeed = WALK_TARGET_SPEED * 0.6;
+      } else {
+        targetSpeed = isBoosting
+          ? MAX_SPEED * BOOST_SPEED_MULTIPLIER
+          : run
+          ? MAX_SPEED
+          : WALK_TARGET_SPEED;
+      }
     } else if (backward) {
-      targetSpeed = -WALK_TARGET_SPEED * BACKWARD_WALK_SPEED_MULT;
+      if (stunState !== "STUMBLE_SIDE") {
+        targetSpeed = -WALK_TARGET_SPEED * BACKWARD_WALK_SPEED_MULT;
+      }
     }
 
     const forwardSpeed = velocity.dot(forwardDir);
@@ -112,9 +121,16 @@ export function usePlayerMovement(
     const targetVelocity = forwardDir.clone().multiplyScalar(newForwardSpeed);
 
     const isWalking = (forward || backward) && !run && !isBoosting;
-    velocity.lerp(targetVelocity, isWalking ? 0.9 : 0.2);
 
-    rb.setLinvel({ x: velocity.x, y: linvel.y, z: velocity.z }, true);
+    if (stunState === "STUMBLE_SIDE") {
+      // During stumble, directly set the full target velocity.
+      // The normal lerp(0.2) is too weak — Rapier's friction kills the tiny velocity before the next frame.
+      const stumbleVelocity = forwardDir.clone().multiplyScalar(targetSpeed);
+      rb.setLinvel({ x: stumbleVelocity.x, y: linvel.y, z: stumbleVelocity.z }, true);
+    } else {
+      velocity.lerp(targetVelocity, isWalking ? 0.9 : 0.2);
+      rb.setLinvel({ x: velocity.x, y: linvel.y, z: velocity.z }, true);
+    }
 
     // =========================
     // 📈 SCORE

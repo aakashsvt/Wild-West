@@ -30,7 +30,7 @@ export function usePlayerImpacts(
   const thresholdsRef = useRef(thresholdControls);
   thresholdsRef.current = thresholdControls;
 
-  const triggerStun = useCallback((severity: ImpactSeverity, source: ImpactSource, impactAngle: string = "main-body") => {
+  const triggerStun = useCallback((severity: ImpactSeverity, source: ImpactSource, impactAngle: string = "main-body", impactVelocity: number = 0) => {
     const now = performance.now();
     const isCurrentlyFalling = stunState.current === "FALL" && stunnedUntil.current > now;
     
@@ -60,18 +60,12 @@ export function usePlayerImpacts(
           pendingStumble.current = true;
           triggerShake(shakeConfigRef.current.minorIntensity, shakeConfigRef.current.minorDuration);
         } else {
-          // If running, stumble immediately and reduce speed
+          // If running, stumble immediately with camera shake
           stunnedUntil.current = now + 1000;
           stunState.current = "STUMBLE_SIDE";
           triggerShake(shakeConfigRef.current.minorIntensity, shakeConfigRef.current.minorDuration);
-          setTimeout(() => {
-            if (bodyRef.current) {
-              const currentVel = bodyRef.current.linvel();
-              bodyRef.current.setLinvel({ x: currentVel.x * 0.8, y: currentYVel, z: currentVel.z * 0.8 }, true);
-            }
-          }, 10);
         }
-        return; // Skip the rest of the frontal logic
+        return; // Skip the rest of the frontal/obstacle logic
       }
 
       // HEAD-ON CRASH LOGIC
@@ -139,30 +133,18 @@ export function usePlayerImpacts(
     }
   }, [triggerShake, bodyRef, stunnedUntil, stunState, shakeConfigRef]);
 
-  // 1. Listen for Hazards (Cubes/Fences)
-  const lastImpactTime = useRef(0);
-
   useEffect(() => {
     const handleImpact = (e: Event) => {
-      const now = performance.now();
       const evt = e as CustomEvent<{ impactVelocity: number; impactAngle?: string }>;
       const { impactVelocity, impactAngle } = evt.detail;
       
       const isHurdle = impactAngle === "hurdle";
-
-      // Debounce: ignore hits that happen within 500ms of a previous hit.
-      // Hurdles have a much shorter debounce (100ms) because they are placed close together.
-      const debounceTime = isHurdle ? 100 : 500;
-      if (now - lastImpactTime.current < debounceTime) return;
 
       const minSpeed = thresholdsRef.current.minorSpeed;
       const majSpeed = thresholdsRef.current.majorSpeed;
       
       // Ignore very slow bumps completely, unless it's a hurdle (which should always stumble)
       if (!isHurdle && impactVelocity < 15) return;
-
-      // Lock in the impact time so follow-up frames from the same crash are ignored
-      lastImpactTime.current = now;
 
       // Interpret the angle based on the sensor name
       let severity: "minor" | "medium" | "major" = "minor";
@@ -190,7 +172,7 @@ export function usePlayerImpacts(
       }
 
       console.log(`[IMPACT MANAGER] Processed severity: ${severity}`);
-      triggerStun(severity, "ENVIRONMENT", impactAngle);
+      triggerStun(severity, "ENVIRONMENT", impactAngle, impactVelocity);
     };
     
     window.addEventListener("hazard-impact", handleImpact);
@@ -209,7 +191,7 @@ export function usePlayerImpacts(
     const KICK_RANGE = 10;
     if (distance < KICK_RANGE) {
       console.log(`[LOCAL STUN] Remote player at distance ${distance.toFixed(1)} is kicking! Local player stunned.`);
-      triggerStun("major", "PLAYER_KICK");
+      triggerStun("major", "PLAYER_KICK", "main-body", 0);
     }
   }, [triggerStun, bodyRef]);
 
