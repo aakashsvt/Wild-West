@@ -319,7 +319,6 @@ export default function Game() {
               <PlayerController playerRef={playerRef} isFirstPersonRef={isFirstPersonRef} />
               <RemotePlayers />
               <Model />
-              <ImpactVFXManager />
               <SceneReadyProbe onReady={handleSceneReady} />
             </Physics>
             <PostProcessingPipeline playerRef={playerRef} isFirstPersonRef={isFirstPersonRef} />
