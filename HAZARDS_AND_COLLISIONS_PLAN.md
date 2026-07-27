@@ -97,4 +97,14 @@ As of the current implementation, we have successfully architected and built the
 - **Accurate Directional Impact Angle Math**: Upgraded `Hazard.tsx` to read the exact physics `contact normal` (`e.manifold.normal()`) instead of the obstacle's center position. Added a strict dot-product threshold (0.80) to flawlessly differentiate between direct Head-On crashes, Side-Swipes, and Rear-End collisions.
 - **Side-Swipe Stumble System**: Routed the new `impactAngle` through the system. Side-swiping a fence no longer triggers a massive Hit-Stop or color drain. Instead, it triggers a minor micro-glitch, a 30% speed reduction, and properly triggers the horse's built-in `STUMBLE` animation clip without breaking forward momentum.
 
+## Progress Checkpoint 3 (Completed Today)
+
+- **Hurdle Mechanics Overhaul**: Completely re-engineered Hurdles. They are now permanent `sensor` objects so the horse seamlessly passes through them instead of bouncing backward. Fixed high-speed "tunneling" by thickening the detection zone.
+- **Cinematic Hurdle Destruction**: Instead of using buggy Rapier `dynamic` physics (which caused them to fall through the world), hurdles now execute a smooth -90 degree visual tipping animation via `useFrame` when smashed.
+- **Render Loop Garbage Collection (Performance)**: Eliminated GC stuttering in `usePlayerCamera.ts` and `usePlayerMovement.ts` by replacing per-frame object instantiations (`new Vector3()`) with persistent module-level static vectors.
+- **Animation Memory Leak Fix**: Patched a massive memory leak in `usePlayerAnimations.ts` by correctly tracking and cleaning up interrupted Three.js `AnimationMixer` event listeners.
+- **UI Damage Overlay (`DamageOverlay.tsx`)**: Replaced the expensive post-processing color drain with a highly-performant UI layer using `framer-motion`. Displays a black vignette for regular obstacle impacts, and a distinct, sharp red-and-black flash specifically for hurdle crashes.
+- **Loss of Control Mechanics**: Enhanced the kinesthetic weight of a hurdle crash by completely freezing steering and acceleration inputs during the stumble animation, forcing the player into a helpless forward coast at 60% speed until recovery.
+- **3D Particle VFX (`ImpactVFXManager.tsx`)**: Built a zero-garbage, high-performance particle system using `THREE.InstancedMesh`. Smashing hurdles triggers an explosion of 50 wooden splinters, while crashing into major obstacles blasts 35 chunks of dirt/rock debris. Particles possess full simulated gravity and rotational velocity, lingering for ~1.5s before rapidly shrinking away.
+
 *(Future VFX and Audio tasks have been migrated to `FUTURE_VFX_PLAN.md`)*
