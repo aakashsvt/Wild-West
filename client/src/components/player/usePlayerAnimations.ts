@@ -72,7 +72,7 @@ export function usePlayerAnimations(horseRef: React.MutableRefObject<any>) {
       next.setLoop(THREE.LoopOnce, 1);
       next.clampWhenFinished = true;
       next.setEffectiveTimeScale(1);
-      next.setEffectiveWeight(2);
+      next.setEffectiveWeight(1); // Set valid weight instead of magic '2'
       next.fadeIn(0.05).play();
 
       currentOverlayAction.current = next;
@@ -81,6 +81,12 @@ export function usePlayerAnimations(horseRef: React.MutableRefObject<any>) {
       collisionHitsDuringOverlay.current.clear();
 
       const mixer = next.getMixer();
+      
+      // Cleanup previous listener if it exists
+      if ((currentOverlayAction as any)._onFinishListener) {
+        mixer.removeEventListener("finished", (currentOverlayAction as any)._onFinishListener);
+      }
+
       const onFinish = (e: any) => {
         if (e.action === next) {
           next.fadeOut(0.1);
@@ -92,9 +98,11 @@ export function usePlayerAnimations(horseRef: React.MutableRefObject<any>) {
 
           collisionHitsDuringOverlay.current.clear();
           mixer.removeEventListener("finished", onFinish);
+          delete (currentOverlayAction as any)._onFinishListener;
         }
       };
 
+      (currentOverlayAction as any)._onFinishListener = onFinish;
       mixer.addEventListener("finished", onFinish);
     }
   };

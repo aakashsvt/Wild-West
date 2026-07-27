@@ -1,7 +1,8 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { RigidBody, CuboidCollider } from "@react-three/rapier";
 import type { RapierRigidBody } from "@react-three/rapier";
 import * as THREE from "three";
+import { useFrame } from "@react-three/fiber";
 
 type HurdleProps = {
   position: [number, number, number];
@@ -12,9 +13,10 @@ type HurdleProps = {
 };
 
 export function Hurdle({ position, rotation = [0, 0, 0], width = 4, height = 1.2, thickness = 1.0 }: HurdleProps) {
-  const [physicsType, setPhysicsType] = React.useState<"fixed" | "dynamic">("fixed");
   const rbRef = useRef<RapierRigidBody>(null);
+  const groupRef = useRef<THREE.Group>(null);
   const hasBeenHit = useRef(false);
+  const [isFalling, setIsFalling] = useState(false);
   
   const postWidth = thickness;
   const barHeight = thickness;
@@ -25,19 +27,10 @@ export function Hurdle({ position, rotation = [0, 0, 0], width = 4, height = 1.2
     if (hasBeenHit.current) return; // Only trigger once
     if (e.other.rigidBodyObject?.name === "player") {
       hasBeenHit.current = true;
+      setIsFalling(true);
       
       const playerVelocity = e.other.rigidBody?.linvel() || { x: 0, y: 0, z: 0 };
       const speed = Math.hypot(playerVelocity.x, playerVelocity.z);
-
-      // Switch to dynamic and apply impulse to make the hurdle fly away visually
-      setPhysicsType("dynamic");
-      setTimeout(() => {
-        if (rbRef.current) {
-          const impulseDir = new THREE.Vector3(playerVelocity.x, 20, playerVelocity.z).normalize();
-          rbRef.current.applyImpulse(impulseDir.multiplyScalar(400), true);
-          rbRef.current.applyTorqueImpulse(new THREE.Vector3(Math.random() * 100, Math.random() * 100, Math.random() * 100), true);
-        }
-      }, 50);
       
       // Dispatch event for stumble animation + camera shake
       window.dispatchEvent(
@@ -51,29 +44,40 @@ export function Hurdle({ position, rotation = [0, 0, 0], width = 4, height = 1.2
     }
   };
 
+  // Animate the hurdle falling forward/backward when hit
+  useFrame((_, delta) => {
+    if (isFalling && groupRef.current) {
+      // Rotate 90 degrees backwards smoothly
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(
+        groupRef.current.rotation.x,
+        -Math.PI / 2,
+        delta * 10
+      );
+    }
+  });
+
   return (
     <RigidBody 
       ref={rbRef}
-      type={physicsType} 
+      type="fixed"
       position={position} 
       rotation={rotation}
       colliders={false}
-      mass={5}
-      gravityScale={physicsType === "fixed" ? 0 : 1}
     >
       {/* 
         ALWAYS a sensor — the horse passes right through without any physics blocking.
         Detection happens via onIntersectionEnter.
+        Z thickness is increased to 2.5 to prevent high-speed tunneling without CCD.
       */}
       <CuboidCollider 
-        args={[width / 2, height / 2, thickness / 2]} 
+        args={[width / 2, height / 2, 2.5]} 
         position={[0, height / 2, 0]} 
         sensor
         onIntersectionEnter={handleIntersection}
       />
 
       {/* Visuals */}
-      <group position={[0, 0, 0]}>
+      <group ref={groupRef} position={[0, 0, 0]}>
         {/* Left Post */}
         <mesh position={[-width / 2 + postWidth / 2, height / 2, 0]}>
           <boxGeometry args={[postWidth, height, postWidth]} />

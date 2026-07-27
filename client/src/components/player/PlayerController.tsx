@@ -2,39 +2,32 @@ import { useFrame, useThree } from "@react-three/fiber";
 import {
   RigidBody,
   type RapierRigidBody,
-  CuboidCollider,
-  CapsuleCollider,
   RoundCuboidCollider,
   interactionGroups,
 } from "@react-three/rapier";
-import { useEffect, useMemo, useRef, useCallback } from "react";
-import { Vector3, Quaternion, Euler } from "three";
+import { useEffect, useMemo, useRef } from "react";
+import { Vector3, Euler } from "three";
 import { useKeyboardControls } from "@react-three/drei";
 import { useGameStore } from "@/hooks/use-game-store";
 import { useLobbyStore } from "@/hooks/use-lobby-store";
-import { getSocket, useSocketEvent } from "@/hooks/use-socket";
+import { getSocket } from "@/hooks/use-socket";
 import { useDustTrail } from "@/hooks/use-dust-trail";
-import type { Vec3Tuple, RacePlayerState } from "@shared/types/multiplayer";
+import type { Vec3Tuple } from "@shared/types/multiplayer";
 import * as THREE from "three";
 import { PerspectiveCamera } from "three";
 import { Model42 } from "../CowboyXHorse_NLA_V42";
 import {
-  isRemoteKicking,
   getSocketIdForBody,
   setRemoteStun,
 } from "@/lib/remoke-kicks";
 
-// const PLAYER_START_POSITION: [number, number, number] = [-340, 5.5787, 410];
 import {
-  PLAYER_START_POSITION, MAX_SPEED, WALK_TARGET_SPEED, TURN_SPEED, BRAKE_FORCE,
-  BOOST_SPEED_MULTIPLIER, WALK2RUN_DURATION_MS, WALK2RUN_ENTER_FADE, WALK2RUN_LEAN_ANGLE,
+  PLAYER_START_POSITION, MAX_SPEED, WALK_TARGET_SPEED,
+  WALK2RUN_DURATION_MS, WALK2RUN_LEAN_ANGLE,
   WALK2RUN_LEAN_SMOOTH_SPEED, WALK_LEAN_ANGLE, WALK_LEAN_SMOOTH_SPEED, PLAYER_START_ROTATION_Y,
-  CAM_OFFSET, CAM_OFFSET_RUN, CAM_LOOK_OFFSET, CAM_OFFSET_REFERENCE_FOV, FIRST_PERSON_HEIGHT_DEFAULT,
-  FIRST_PERSON_FORWARD, FIRST_PERSON_LOOK_DISTANCE, MOUSE_LOOK_SENSITIVITY, MOUSE_LOOK_YAW_LIMIT,
-  MOUSE_LOOK_PITCH_LIMIT, TP_FOV_WALK, TP_FOV_RUN, FP_FOV_RUN_START_SPEED, FP_FOV_RUN_MAX_SPEED,
-  FP_FOV_IDLE, FP_FOV_RUN, JUMP_CAMERA_BOB_DURATION, NETWORK_STATE_INTERVAL, START_LANE_SPACING,
-  jumpCameraBobOffset
-} from './constants';
+  CAM_OFFSET, CAM_LOOK_OFFSET, FIRST_PERSON_HEIGHT_DEFAULT,
+  MOUSE_LOOK_SENSITIVITY, START_LANE_SPACING,
+} from "./constants";
 import { HorseHeadTilt } from './HorseHeadTilt';
 import { usePlayerMovement } from './usePlayerMovement';
 import { usePlayerCamera } from './usePlayerCamera';
