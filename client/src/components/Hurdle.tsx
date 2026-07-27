@@ -13,6 +13,7 @@ type HurdleProps = {
 
 export function Hurdle({ position, rotation = [0, 0, 0], width = 4, height = 1.2, thickness = 1.0 }: HurdleProps) {
   const [physicsType, setPhysicsType] = React.useState<"fixed" | "dynamic">("fixed");
+  const [isHit, setIsHit] = React.useState(false);
   const rbRef = useRef<RapierRigidBody>(null);
   
   const postWidth = thickness;
@@ -21,6 +22,7 @@ export function Hurdle({ position, rotation = [0, 0, 0], width = 4, height = 1.2
   const handleCollision = (e: any) => {
     if (e.other.rigidBodyObject?.name === "player") {
       setPhysicsType("dynamic");
+      setIsHit(true); // Make the hurdle a sensor so it stops physically blocking the horse
       
       const playerVelocity = e.other.rigidBody?.linvel() || { x: 0, y: 0, z: 0 };
       const speed = Math.hypot(playerVelocity.x, playerVelocity.z);
@@ -59,6 +61,7 @@ export function Hurdle({ position, rotation = [0, 0, 0], width = 4, height = 1.2
       <CuboidCollider 
         args={[width / 2, height / 2, thickness / 2]} 
         position={[0, height / 2, 0]} 
+        sensor={isHit}
       />
 
       {/* Visuals */}

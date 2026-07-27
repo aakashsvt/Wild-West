@@ -145,16 +145,21 @@ export function usePlayerImpacts(
   useEffect(() => {
     const handleImpact = (e: Event) => {
       const now = performance.now();
-      // Debounce: ignore hits that happen within 500ms of a previous hit
-      if (now - lastImpactTime.current < 500) return;
-
       const evt = e as CustomEvent<{ impactVelocity: number; impactAngle?: string }>;
       const { impactVelocity, impactAngle } = evt.detail;
+      
+      const isHurdle = impactAngle === "hurdle";
+
+      // Debounce: ignore hits that happen within 500ms of a previous hit.
+      // Hurdles have a much shorter debounce (100ms) because they are placed close together.
+      const debounceTime = isHurdle ? 100 : 500;
+      if (now - lastImpactTime.current < debounceTime) return;
+
       const minSpeed = thresholdsRef.current.minorSpeed;
       const majSpeed = thresholdsRef.current.majorSpeed;
       
-      // Ignore very slow bumps completely
-      if (impactVelocity < 15) return;
+      // Ignore very slow bumps completely, unless it's a hurdle (which should always stumble)
+      if (!isHurdle && impactVelocity < 15) return;
 
       // Lock in the impact time so follow-up frames from the same crash are ignored
       lastImpactTime.current = now;
