@@ -1,11 +1,17 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useSocketEvent } from "@/hooks/use-socket";
 import type { RacePlayerState } from "@shared/types/multiplayer";
 import type { RapierRigidBody } from "@react-three/rapier";
 import { Vector3 } from "three";
 import * as THREE from "three";
 import { useControls } from "leva";
-import { useRef } from "react";
+import { 
+  STUN_DURATION_MAJOR, 
+  STUN_DURATION_MEDIUM, 
+  STUN_DURATION_MINOR, 
+  STUN_DURATION_KICK, 
+  STUN_DURATION_HURDLE 
+} from "./constants";
 
 export type ImpactSeverity = "minor" | "medium" | "major";
 export type ImpactSource = "ENVIRONMENT" | "PLAYER_KICK";
@@ -29,6 +35,9 @@ export function usePlayerImpacts(
   });
   const thresholdsRef = useRef(thresholdControls);
   thresholdsRef.current = thresholdControls;
+  
+  // Track active recoil timeout so we can cancel it if another crash happens before it fires
+  const activeRecoilTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const triggerStun = useCallback((severity: ImpactSeverity, source: ImpactSource, impactAngle: string = "main-body", impactVelocity: number = 0) => {
     const now = performance.now();
@@ -36,6 +45,11 @@ export function usePlayerImpacts(
     
     // Priority System: Don't override a major fall with a minor stumble
     if (isCurrentlyFalling && severity !== "major") return;
+
+    if (activeRecoilTimeout.current) {
+      clearTimeout(activeRecoilTimeout.current);
+      activeRecoilTimeout.current = null;
+    }
 
     if (source === "ENVIRONMENT") {
       // Calculate forward direction to bounce the player backwards
@@ -61,7 +75,7 @@ export function usePlayerImpacts(
           triggerShake(shakeConfigRef.current.minorIntensity, shakeConfigRef.current.minorDuration);
         } else {
           // If running, stumble immediately with camera shake
-          stunnedUntil.current = now + 1000;
+          stunnedUntil.current = now + STUN_DURATION_HURDLE;
           stunState.current = "STUMBLE_SIDE";
           triggerShake(shakeConfigRef.current.minorIntensity, shakeConfigRef.current.minorDuration);
         }
@@ -75,7 +89,7 @@ export function usePlayerImpacts(
         triggerShake(shakeConfigRef.current.majorIntensity, shakeConfigRef.current.majorDuration);
         
         // Wait for the Hit-Stop freeze to end before applying the recoil impulse
-        setTimeout(() => {
+        activeRecoilTimeout.current = setTimeout(() => {
           if (bodyRef.current) {
             if (isFrontal) {
               bodyRef.current.setLinvel({ x: -forwardDir.x * 35, y: currentYVel, z: -forwardDir.z * 35 }, true);
@@ -86,14 +100,14 @@ export function usePlayerImpacts(
           }
         }, hitStopDuration);
         
-        stunnedUntil.current = now + 3000;
+        stunnedUntil.current = now + STUN_DURATION_MAJOR;
         stunState.current = "FALL";
       } else if (severity === "medium") {
         const hitStopDuration = thresholdsRef.current.hitStopMediumMs; // Configurable freeze
         hitStopUntil.current = now + hitStopDuration;
         triggerShake(shakeConfigRef.current.mediumIntensity, shakeConfigRef.current.mediumDuration);
         
-        setTimeout(() => {
+        activeRecoilTimeout.current = setTimeout(() => {
           if (bodyRef.current) {
             if (isFrontal) {
               bodyRef.current.setLinvel({ x: -forwardDir.x * 25, y: currentYVel, z: -forwardDir.z * 25 }, true);
@@ -103,11 +117,11 @@ export function usePlayerImpacts(
             }
           }
         }, hitStopDuration);
-        stunnedUntil.current = now + 1500;
+        stunnedUntil.current = now + STUN_DURATION_MEDIUM;
         stunState.current = "STUMBLE";
       } else {
         triggerShake(shakeConfigRef.current.minorIntensity, shakeConfigRef.current.minorDuration);
-        setTimeout(() => {
+        activeRecoilTimeout.current = setTimeout(() => {
           if (bodyRef.current) {
             if (isFrontal) {
               bodyRef.current.setLinvel({ x: -forwardDir.x * 15, y: currentYVel, z: -forwardDir.z * 15 }, true);
@@ -117,7 +131,7 @@ export function usePlayerImpacts(
             }
           }
         }, 10);
-        stunnedUntil.current = now + 1000;
+        stunnedUntil.current = now + STUN_DURATION_MINOR;
         stunState.current = "STUMBLE";
       }
     } else if (source === "PLAYER_KICK") {
@@ -128,7 +142,7 @@ export function usePlayerImpacts(
         // Knock their speed down and simulate a rough hit
         bodyRef.current.setLinvel({ x: vel.x * 0.1, y: vel.y, z: vel.z * 0.1 }, true);
       }
-      stunnedUntil.current = now + 2000;
+      stunnedUntil.current = now + STUN_DURATION_KICK;
       stunState.current = "KICKED"; 
     }
   }, [triggerShake, bodyRef, stunnedUntil, stunState, shakeConfigRef]);
@@ -171,7 +185,6 @@ export function usePlayerImpacts(
         else severity = "minor";
       }
 
-      console.log(`[IMPACT MANAGER] Processed severity: ${severity}`);
       triggerStun(severity, "ENVIRONMENT", impactAngle, impactVelocity);
     };
     
@@ -190,7 +203,6 @@ export function usePlayerImpacts(
 
     const KICK_RANGE = 10;
     if (distance < KICK_RANGE) {
-      console.log(`[LOCAL STUN] Remote player at distance ${distance.toFixed(1)} is kicking! Local player stunned.`);
       triggerStun("major", "PLAYER_KICK", "main-body", 0);
     }
   }, [triggerStun, bodyRef]);

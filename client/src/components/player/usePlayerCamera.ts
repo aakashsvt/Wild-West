@@ -20,6 +20,19 @@ import {
   CAM_LOOK_OFFSET,
 } from "./constants";
 
+// Static variables to prevent per-frame garbage collection
+const _horsePos = new Vector3();
+const _quat = new Quaternion();
+const _fpPos = new Vector3();
+const _yawedDir = new Vector3();
+const _pitchAxis = new Vector3();
+const _fpLookDir = new Vector3();
+const _fpLookAt = new Vector3();
+const _scaledOffset = new Vector3();
+const _desiredCamPos = new Vector3();
+const _desiredLookAt = new Vector3();
+const _up = new Vector3(0, 1, 0);
+
 export function usePlayerCamera(camera: PerspectiveCamera) {
   const shakeState = useRef({ intensity: 0, duration: 0, timeRemaining: 0 });
 
@@ -41,9 +54,9 @@ export function usePlayerCamera(camera: PerspectiveCamera) {
     isRunning: boolean
   ) => {
     const bodyPos = rb.translation();
-    const horsePos = new Vector3(bodyPos.x, bodyPos.y, bodyPos.z);
+    _horsePos.set(bodyPos.x, bodyPos.y, bodyPos.z);
     const rotation = rb.rotation();
-    const quat = new Quaternion(rotation.x, rotation.y, rotation.z, rotation.w);
+    _quat.set(rotation.x, rotation.y, rotation.z, rotation.w);
 
     if (isFirstPerson) {
       const fovT = THREE.MathUtils.clamp(
@@ -64,38 +77,34 @@ export function usePlayerCamera(camera: PerspectiveCamera) {
         camera.updateProjectionMatrix();
       }
 
-      const fpPos = new Vector3(0, FIRST_PERSON_HEIGHT_DEFAULT, FIRST_PERSON_FORWARD)
-        .applyQuaternion(quat)
-        .add(horsePos);
+      _fpPos.set(0, FIRST_PERSON_HEIGHT_DEFAULT, FIRST_PERSON_FORWARD)
+        .applyQuaternion(_quat)
+        .add(_horsePos);
 
-      const yawedDir = forwardDir
-        .clone()
-        .applyAxisAngle(new Vector3(0, 1, 0), mouseYawOffset);
-      const pitchAxis = new Vector3()
-        .crossVectors(yawedDir, new Vector3(0, 1, 0))
-        .normalize();
-      const fpLookDir = yawedDir.applyAxisAngle(pitchAxis, mousePitchOffset);
-      const fpLookAt = fpLookDir
-        .clone()
+      _yawedDir.copy(forwardDir)
+        .applyAxisAngle(_up, mouseYawOffset);
+      _pitchAxis.crossVectors(_yawedDir, _up).normalize();
+      _fpLookDir.copy(_yawedDir).applyAxisAngle(_pitchAxis, mousePitchOffset);
+      _fpLookAt.copy(_fpLookDir)
         .multiplyScalar(FIRST_PERSON_LOOK_DISTANCE)
-        .add(fpPos);
+        .add(_fpPos);
 
       const jumpAction = horseRef.current?.actions?.JUMP;
       if (jumpAction && jumpAction.isRunning()) {
         const t = jumpAction.time % JUMP_CAMERA_BOB_DURATION;
         const bob = jumpCameraBobOffset(t) * jumpAction.getEffectiveWeight();
-        fpPos.y += bob;
+        _fpPos.y += bob;
       }
 
       if (!fpCameraSnapped.current) {
-        camera.position.copy(fpPos);
+        camera.position.copy(_fpPos);
         fpCameraSnapped.current = true;
       } else {
         const t = Math.min(1, delta * 40);
-        camera.position.lerp(fpPos, t);
+        camera.position.lerp(_fpPos, t);
       }
       
-      camera.lookAt(fpLookAt);
+      camera.lookAt(_fpLookAt);
       cameraSnapped.current = false;
     } else {
       const targetTpFov = isRunning ? TP_FOV_RUN : TP_FOV_WALK;
@@ -113,22 +122,22 @@ export function usePlayerCamera(camera: PerspectiveCamera) {
         Math.tan(THREE.MathUtils.degToRad(CAM_OFFSET_REFERENCE_FOV) / 2) /
         Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
       const baseOffset = isRunning ? CAM_OFFSET_RUN : CAM_OFFSET;
-      const scaledOffset = new Vector3(
+      _scaledOffset.set(
         baseOffset.x * fovDollyScale,
         baseOffset.y,
         baseOffset.z * fovDollyScale
       );
-      const desiredCamPos = scaledOffset.applyQuaternion(quat).add(horsePos);
+      _desiredCamPos.copy(_scaledOffset).applyQuaternion(_quat).add(_horsePos);
 
       if (!cameraSnapped.current) {
-        camera.position.copy(desiredCamPos);
+        camera.position.copy(_desiredCamPos);
         cameraSnapped.current = true;
       } else {
-        camera.position.lerp(desiredCamPos, 1 - Math.pow(0.001, delta));
+        camera.position.lerp(_desiredCamPos, 1 - Math.pow(0.001, delta));
       }
 
-      const desiredLookAt = CAM_LOOK_OFFSET.clone().add(horsePos);
-      camera.lookAt(desiredLookAt);
+      _desiredLookAt.copy(CAM_LOOK_OFFSET).add(_horsePos);
+      camera.lookAt(_desiredLookAt);
       fpCameraSnapped.current = false;
     }
 

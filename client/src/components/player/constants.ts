@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Vector3 } from 'three';
+import { Vector3, MathUtils } from 'three';
 
 // const PLAYER_START_POSITION: [number, number, number] = [-340, 5.5787, 410];
 
@@ -212,6 +212,11 @@ export const START_LANE_SPACING = 10;
 export const BACKWARD_WALK_SPEED_MULT = 0.8;
 
 // Stun & Impact Recoil Constants
+export const STUN_DURATION_MAJOR = 3000;
+export const STUN_DURATION_MEDIUM = 1500;
+export const STUN_DURATION_MINOR = 1000;
+export const STUN_DURATION_KICK = 2000;
+export const STUN_DURATION_HURDLE = 1000;
 export const FALL_RECOIL_DURATION_MS = 300;
 export const FALL_RECOIL_SPEED_MULTIPLIER = 0.4;
 export const STUMBLE_MEDIUM_RECOIL_DURATION_MS = 300;

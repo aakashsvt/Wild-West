@@ -17,6 +17,18 @@ import {
 import { PlayerInputs } from "./usePlayerStateMachine";
 import { MutableRefObject } from "react";
 
+// Static variables to prevent per-frame garbage collection
+const _velocity = new Vector3();
+const _quat = new Quaternion();
+const _euler = new Euler();
+const _forwardDir = new Vector3();
+const _targetVelocity = new Vector3();
+const _deltaQuat = new Quaternion();
+const _targetQuat = new Quaternion();
+const _posVec = new Vector3();
+const _up = new Vector3(0, 1, 0);
+const _forwardZ = new Vector3(0, 0, 1);
+
 export function usePlayerMovement(
   setSpeed: (speed: number) => void,
   addScore: (score: number) => void
@@ -31,11 +43,13 @@ export function usePlayerMovement(
   ) => {
     const { forward, backward, left, right, run, isBoosting } = inputs;
     const linvel = rb.linvel();
-    const velocity = new Vector3(linvel.x, linvel.y, linvel.z);
+    _velocity.set(linvel.x, linvel.y, linvel.z);
+    
     const rotation = rb.rotation();
-    const quat1 = new Quaternion(rotation.x, rotation.y, rotation.z, rotation.w);
-    const euler = new Euler().setFromQuaternion(quat1);
-    const forwardDir = new Vector3(0, 0, 1).applyEuler(euler).normalize();
+    _quat.set(rotation.x, rotation.y, rotation.z, rotation.w);
+    _euler.setFromQuaternion(_quat);
+    
+    _forwardDir.copy(_forwardZ).applyEuler(_euler).normalize();
     const currentSpeed = Math.sqrt(linvel.x ** 2 + linvel.z ** 2);
 
     if (stunState !== "NONE") {
@@ -51,16 +65,16 @@ export function usePlayerMovement(
       }
 
       if (recoilSpeed !== 0) {
-        const targetVelocity = forwardDir.clone().multiplyScalar(recoilSpeed);
-        velocity.lerp(targetVelocity, delta * 15);
-        rb.setLinvel({ x: velocity.x, y: linvel.y, z: velocity.z }, true);
+        _targetVelocity.copy(_forwardDir).multiplyScalar(recoilSpeed);
+        _velocity.lerp(_targetVelocity, delta * 15);
+        rb.setLinvel({ x: _velocity.x, y: linvel.y, z: _velocity.z }, true);
       }
 
       if (stunState !== "STUMBLE_SIDE") {
         return {
-          velocity,
+          velocity: _velocity,
           currentSpeed,
-          forwardDir
+          forwardDir: _forwardDir
         };
       }
     }
@@ -77,13 +91,10 @@ export function usePlayerMovement(
       );
       const turnAmount = turnDir * TURN_SPEED * turnSpeedFactor * delta;
 
-      const deltaQuat = new Quaternion().setFromAxisAngle(
-        new Vector3(0, 1, 0),
-        turnAmount
-      );
-      const targetQuat = quat1.clone().multiply(deltaQuat);
-      quat1.slerp(targetQuat, 0.5);
-      rb.setRotation({ x: quat1.x, y: quat1.y, z: quat1.z, w: quat1.w }, true);
+      _deltaQuat.setFromAxisAngle(_up, turnAmount);
+      _targetQuat.copy(_quat).multiply(_deltaQuat);
+      _quat.slerp(_targetQuat, 0.5);
+      rb.setRotation({ x: _quat.x, y: _quat.y, z: _quat.z, w: _quat.w }, true);
     }
 
     // =========================
@@ -107,7 +118,7 @@ export function usePlayerMovement(
       }
     }
 
-    const forwardSpeed = velocity.dot(forwardDir);
+    const forwardSpeed = _velocity.dot(_forwardDir);
     const displaySpeed = Math.abs(forwardSpeed);
     const displaySpeedKmh = Math.round(displaySpeed * 1.5);
     
@@ -118,33 +129,33 @@ export function usePlayerMovement(
       targetSpeed,
       delta * 4
     );
-    const targetVelocity = forwardDir.clone().multiplyScalar(newForwardSpeed);
+    _targetVelocity.copy(_forwardDir).multiplyScalar(newForwardSpeed);
 
     const isWalking = (forward || backward) && !run && !isBoosting;
 
     if (stunState === "STUMBLE_SIDE") {
       // During stumble, directly set the full target velocity.
       // The normal lerp(0.2) is too weak — Rapier's friction kills the tiny velocity before the next frame.
-      const stumbleVelocity = forwardDir.clone().multiplyScalar(targetSpeed);
+      const stumbleVelocity = _forwardDir.clone().multiplyScalar(targetSpeed);
       rb.setLinvel({ x: stumbleVelocity.x, y: linvel.y, z: stumbleVelocity.z }, true);
     } else {
-      velocity.lerp(targetVelocity, isWalking ? 0.9 : 0.2);
-      rb.setLinvel({ x: velocity.x, y: linvel.y, z: velocity.z }, true);
+      _velocity.lerp(_targetVelocity, isWalking ? 0.9 : 0.2);
+      rb.setLinvel({ x: _velocity.x, y: linvel.y, z: _velocity.z }, true);
     }
 
     // =========================
     // 📈 SCORE
     // =========================
     const pos = rb.translation();
-    const posVec = new Vector3(pos.x, pos.y, pos.z);
-    const dist = posVec.distanceTo(lastPosition.current);
+    _posVec.set(pos.x, pos.y, pos.z);
+    const dist = _posVec.distanceTo(lastPosition.current);
     
     if (dist > 0.1) {
       addScore(Math.floor(dist));
-      lastPosition.current.copy(posVec);
+      lastPosition.current.copy(_posVec);
     }
 
-    return { velocity, currentSpeed, forwardDir, displaySpeedKmh };
+    return { velocity: _velocity, currentSpeed, forwardDir: _forwardDir, displaySpeedKmh };
   };
 
   return { updateMovement };
