@@ -1,6 +1,6 @@
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { CuboidCollider, RigidBody, RoundCuboidCollider, type RapierRigidBody } from "@react-three/rapier";
+import { CuboidCollider, RigidBody, RoundCuboidCollider, type RapierRigidBody, interactionGroups } from "@react-three/rapier";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   Euler,
@@ -336,7 +336,7 @@ function RemoteRider({ player, playerIndex, playerCount }: RemoteRiderProps) {
         dominanceGroup={10}
         enabledRotations={[false, false, false]}
         ccd
-
+        collisionGroups={interactionGroups(4, [0])}
       >
         {/* <RoundCuboidCollider
           args={[1.4, 0.7, 5, 0.2]}

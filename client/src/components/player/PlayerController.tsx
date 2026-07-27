@@ -5,6 +5,7 @@ import {
   CuboidCollider,
   CapsuleCollider,
   RoundCuboidCollider,
+  interactionGroups,
 } from "@react-three/rapier";
 import { useEffect, useMemo, useRef, useCallback } from "react";
 import { Vector3, Quaternion, Euler } from "three";
@@ -42,6 +43,7 @@ import { usePlayerNetwork } from './usePlayerNetwork';
 import { useControls, button } from "leva";
 import { usePlayerStateMachine } from './usePlayerStateMachine';
 import { usePlayerImpacts } from './usePlayerImpacts';
+
 type Props = {
   playerRef: React.MutableRefObject<RapierRigidBody | null>;
   isFirstPersonRef: React.MutableRefObject<boolean>;
@@ -49,6 +51,7 @@ type Props = {
 export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
   const horseRef = useRef<any>(null);
   const leanGroupRef = useRef<THREE.Group>(null);
+  
   // Shared with HorseHeadTilt below so it can read the same turn state
   // without recomputing it — updated once per frame in the main loop.
   const turnLeanInput = useRef({ active: false, dir: 0 });
@@ -328,6 +331,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
         args={[3, 5, 5, 0.2]}
         position={[0, 5.2, 1]}
         sensor
+        collisionGroups={interactionGroups(3, [4])}
         onCollisionEnter={({ other }) => {
           console.log("aaaaaacollision enter", other.rigidBody);
           if (!other.rigidBody) return;

@@ -98,22 +98,56 @@ export function usePlayerImpacts(
   }, [triggerShake, bodyRef, stunnedUntil, stunState, shakeConfigRef]);
 
   // 1. Listen for Hazards (Cubes/Fences)
+  const lastImpactTime = useRef(0);
+
   useEffect(() => {
-    const handleHazard = (e: any) => {
-      const { impactVelocity } = e.detail;
+    const handleImpact = (e: Event) => {
+      const now = performance.now();
+      // Debounce: ignore hits that happen within 500ms of a previous hit
+      if (now - lastImpactTime.current < 500) return;
+
+      const evt = e as CustomEvent<{ impactVelocity: number; impactAngle?: string }>;
+      const { impactVelocity, impactAngle } = evt.detail;
+      const minSpeed = thresholdsRef.current.minorSpeed;
+      const majSpeed = thresholdsRef.current.majorSpeed;
       
-      let severity: ImpactSeverity = "minor";
-      if (impactVelocity >= thresholdsRef.current.majorSpeed) {
-        severity = "major";
-      } else if (impactVelocity >= thresholdsRef.current.minorSpeed) {
-        severity = "medium";
+      // Ignore very slow bumps completely
+      if (impactVelocity < 15) return;
+
+      // Lock in the impact time so follow-up frames from the same crash are ignored
+      lastImpactTime.current = now;
+
+      // Interpret the angle based on the sensor name
+      let severity: "minor" | "medium" | "major" = "minor";
+      
+      if (impactAngle === "sensor-front" || impactAngle === "main-body") {
+        if (impactVelocity >= majSpeed) severity = "major";
+        else if (impactVelocity >= minSpeed) severity = "medium";
+        else severity = "minor";
+      } else if (impactAngle === "sensor-left" || impactAngle === "sensor-right" || impactAngle === "side-swipe") {
+        severity = "minor";
+      } else if (impactAngle === "sensor-rear" || impactAngle === "rear-end") {
+        severity = "minor";
+      } else if (impactAngle === "sensor-front-left" || impactAngle === "sensor-front-right" || impactAngle === "diagonal-front") {
+        // Diagonals require slightly more speed to be considered a major crash
+        if (impactVelocity >= majSpeed + 5) severity = "major";
+        else if (impactVelocity >= minSpeed) severity = "medium";
+        else severity = "minor";
+      } else if (impactAngle === "sensor-rear-left" || impactAngle === "sensor-rear-right" || impactAngle === "diagonal-rear") {
+        severity = "minor";
+      } else {
+        // Fallback for unrecognized angles
+        if (impactVelocity >= majSpeed) severity = "major";
+        else if (impactVelocity >= minSpeed) severity = "medium";
+        else severity = "minor";
       }
 
       console.log(`[IMPACT MANAGER] Processed severity: ${severity}`);
       triggerStun(severity, "ENVIRONMENT");
     };
-    window.addEventListener("hazard-impact", handleHazard);
-    return () => window.removeEventListener("hazard-impact", handleHazard);
+    
+    window.addEventListener("hazard-impact", handleImpact);
+    return () => window.removeEventListener("hazard-impact", handleImpact);
   }, [triggerStun]);
 
   // 2. Listen for Multiplayer Kicks
