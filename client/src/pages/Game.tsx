@@ -21,7 +21,6 @@ import { Loader2 } from "lucide-react";
 import { Link, Redirect } from "wouter";
 import { PostProcessingPipeline } from "@/components/PostProcessingPipeline";
 import { DamageOverlay } from "@/components/DamageOverlay";
-import { EyeBlinkOverlay } from "@/components/EyeBlinkOverlay";
 import { ImpactVFXManager } from "@/components/ImpactVFXManager";
 
 // ── Western palette — matches Home and LoadingScreen ─────────────────────────
@@ -301,7 +300,6 @@ export default function Game() {
       </div>
 
       <DamageOverlay />
-      <EyeBlinkOverlay />
       <GameHUD />
       <GameOverModal />
       <TouchControls />

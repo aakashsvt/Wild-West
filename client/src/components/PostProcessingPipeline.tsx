@@ -236,6 +236,8 @@ export function PostProcessingPipeline({ playerRef, isFirstPersonRef }: Props) {
   const tempVec = useRef(new THREE.Vector3())
   const chromaticIntensity = useRef(0)
   const currentSaturation = useRef(0.96) // Base western look saturation
+  const currentVignette = useRef(1.0)
+  const currentTemperature = useRef(0.0)
 
   // Sync with the same thresholds used in usePlayerImpacts.ts
   const { minorSpeed, majorSpeed } = useControls("Impact Thresholds", {
@@ -275,11 +277,15 @@ export function PostProcessingPipeline({ playerRef, isFirstPersonRef }: Props) {
       
       // Head-on or diagonal-front collisions get the massive effect
       if (vel >= majSpeedRef.current) {
-        chromaticIntensity.current = 0.10; // Subtle peak
-        currentSaturation.current = 0.15; // Massive color drain (almost black & white)
+        chromaticIntensity.current = 0.15; // Heavy double-vision
+        currentSaturation.current = 0.15; // Massive color drain
+        currentVignette.current = 2.5; // Heavy dark edges
+        currentTemperature.current = 0.8; // Intense Sepia warmth
       } else if (vel >= minSpeedRef.current) {
-        chromaticIntensity.current = 0.04; // Very light peak
+        chromaticIntensity.current = 0.06; // Light double-vision
         currentSaturation.current = 0.50; // Moderate color drain
+        currentVignette.current = 1.5; // Slight vignette pinch
+        currentTemperature.current = 0.3; // Slight sepia
       }
     };
     window.addEventListener("hazard-impact", onHazard);
@@ -352,13 +358,22 @@ export function PostProcessingPipeline({ playerRef, isFirstPersonRef }: Props) {
 
       // 2. Slowly bleed color (saturation) back into the world
       if (currentSaturation.current < 0.96) {
-        // Lerp moves 40% of the remaining distance per second (takes ~4-5s to visually recover)
-        // Cap lerp factor at 1.0 to guarantee we never overshoot
         currentSaturation.current = THREE.MathUtils.lerp(currentSaturation.current, 0.96, Math.min(dt * 0.4, 1.0)); 
       }
-      // Only apply to shader if enabled in Leva
       grade.uniforms.saturation.value = 
         (crashEffectMode === "both" || crashEffectMode === "drain") ? currentSaturation.current : 0.96;
+        
+      // 3. Slowly recover vignette
+      if (currentVignette.current > 1.001) {
+        currentVignette.current = THREE.MathUtils.lerp(currentVignette.current, 1.0, Math.min(dt * 0.5, 1.0));
+      }
+      grade.uniforms.vignette.value = (crashEffectMode === "both" || crashEffectMode === "drain") ? currentVignette.current : 1.0;
+      
+      // 4. Slowly recover temperature (sepia)
+      if (currentTemperature.current > 0.001) {
+        currentTemperature.current = THREE.MathUtils.lerp(currentTemperature.current, 0.0, Math.min(dt * 0.5, 1.0));
+      }
+      grade.uniforms.temperature.value = (crashEffectMode === "both" || crashEffectMode === "drain") ? currentTemperature.current : 0.0;
     }
 
     if (heat) heat.uniforms.time.value = state.clock.elapsedTime
