@@ -28,7 +28,7 @@ export function usePlayerImpacts(
 
   const thresholdControls = useControls("Impact Thresholds", {
     minorSpeed: { value: 20, min: 1, max: 100, step: 1 },
-    majorSpeed: { value: 45, min: 1, max: 200, step: 1 },
+    majorSpeed: { value: 48, min: 1, max: 200, step: 1 },
   });
   const thresholdsRef = useRef(thresholdControls);
   thresholdsRef.current = thresholdControls;
@@ -87,7 +87,7 @@ export function usePlayerImpacts(
         // Apply recoil impulse immediately
         if (bodyRef.current) {
           if (isFrontal) {
-            bodyRef.current.setLinvel({ x: -forwardDir.x * 24.5, y: currentYVel, z: -forwardDir.z * 24.5 }, true);
+            bodyRef.current.setLinvel({ x: -forwardDir.x * 8.0, y: currentYVel, z: -forwardDir.z * 8.0 }, true);
           } else {
             const currentVel = bodyRef.current.linvel();
             bodyRef.current.setLinvel({ x: currentVel.x * 0.2, y: currentYVel, z: currentVel.z * 0.2 }, true);
@@ -102,7 +102,7 @@ export function usePlayerImpacts(
         // Apply recoil impulse immediately
         if (bodyRef.current) {
           if (isFrontal) {
-            bodyRef.current.setLinvel({ x: -forwardDir.x * 25, y: currentYVel, z: -forwardDir.z * 25 }, true);
+            bodyRef.current.setLinvel({ x: -forwardDir.x * 6.0, y: currentYVel, z: -forwardDir.z * 6.0 }, true);
           } else {
             const currentVel = bodyRef.current.linvel();
             bodyRef.current.setLinvel({ x: currentVel.x * 0.5, y: currentYVel, z: currentVel.z * 0.5 }, true);
