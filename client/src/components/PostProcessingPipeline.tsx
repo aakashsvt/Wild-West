@@ -238,11 +238,9 @@ export function PostProcessingPipeline({ playerRef, isFirstPersonRef }: Props) {
   const currentSaturation = useRef(0.96) // Base western look saturation
 
   // Sync with the same thresholds used in usePlayerImpacts.ts
-  const { minorSpeed, majorSpeed } = useControls("Impact Thresholds & Time Dilation", {
+  const { minorSpeed, majorSpeed } = useControls("Impact Thresholds", {
     minorSpeed: { value: 20, min: 1, max: 100, step: 1 },
     majorSpeed: { value: 45, min: 1, max: 200, step: 1 },
-    hitStopMajorMs: { value: 250, min: 0, max: 1000, step: 10 },
-    hitStopMediumMs: { value: 100, min: 0, max: 1000, step: 10 },
   });
 
   const minSpeedRef = useRef(minorSpeed);

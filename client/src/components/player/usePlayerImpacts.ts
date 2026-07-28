@@ -19,7 +19,6 @@ export type ImpactSource = "ENVIRONMENT" | "PLAYER_KICK";
 export function usePlayerImpacts(
   bodyRef: React.MutableRefObject<RapierRigidBody | null>,
   stunnedUntil: React.MutableRefObject<number>,
-  hitStopUntil: React.MutableRefObject<number>,
   stunState: React.MutableRefObject<"NONE" | "FALL" | "STUMBLE" | "STUMBLE_SIDE" | "KICKED">,
   triggerShake: (intensity: number, duration: number) => void,
   shakeConfigRef: React.MutableRefObject<any>,
@@ -27,17 +26,15 @@ export function usePlayerImpacts(
   pendingStumble: React.MutableRefObject<boolean>
 ) {
 
-  const thresholdControls = useControls("Impact Thresholds & Time Dilation", {
+  const thresholdControls = useControls("Impact Thresholds", {
     minorSpeed: { value: 20, min: 1, max: 100, step: 1 },
     majorSpeed: { value: 45, min: 1, max: 200, step: 1 },
-    hitStopMajorMs: { value: 250, min: 0, max: 1000, step: 10 },
-    hitStopMediumMs: { value: 100, min: 0, max: 1000, step: 10 },
   });
   const thresholdsRef = useRef(thresholdControls);
   thresholdsRef.current = thresholdControls;
   
-  // Track active recoil timeout so we can cancel it if another crash happens before it fires
-  const activeRecoilTimeout = useRef<NodeJS.Timeout | null>(null);
+
+
 
   const triggerStun = useCallback((severity: ImpactSeverity, source: ImpactSource, impactAngle: string = "main-body", impactVelocity: number = 0) => {
     const now = performance.now();
@@ -46,10 +43,7 @@ export function usePlayerImpacts(
     // Priority System: Don't override a major fall with a minor stumble
     if (isCurrentlyFalling && severity !== "major") return;
 
-    if (activeRecoilTimeout.current) {
-      clearTimeout(activeRecoilTimeout.current);
-      activeRecoilTimeout.current = null;
-    }
+
 
     if (source === "ENVIRONMENT") {
       // Calculate forward direction to bounce the player backwards
@@ -84,53 +78,45 @@ export function usePlayerImpacts(
 
       // HEAD-ON CRASH LOGIC
       if (severity === "major") {
-        const hitStopDuration = thresholdsRef.current.hitStopMajorMs; // Configurable freeze
-        hitStopUntil.current = now + hitStopDuration;
         triggerShake(shakeConfigRef.current.majorIntensity, shakeConfigRef.current.majorDuration);
         
-        // Wait for the Hit-Stop freeze to end before applying the recoil impulse
-        activeRecoilTimeout.current = setTimeout(() => {
-          if (bodyRef.current) {
-            if (isFrontal) {
-              bodyRef.current.setLinvel({ x: -forwardDir.x * 35, y: currentYVel, z: -forwardDir.z * 35 }, true);
-            } else {
-              const currentVel = bodyRef.current.linvel();
-              bodyRef.current.setLinvel({ x: currentVel.x * 0.2, y: currentYVel, z: currentVel.z * 0.2 }, true);
-            }
+        // Apply recoil impulse immediately
+        if (bodyRef.current) {
+          if (isFrontal) {
+            bodyRef.current.setLinvel({ x: -forwardDir.x * 24.5, y: currentYVel, z: -forwardDir.z * 24.5 }, true);
+          } else {
+            const currentVel = bodyRef.current.linvel();
+            bodyRef.current.setLinvel({ x: currentVel.x * 0.2, y: currentYVel, z: currentVel.z * 0.2 }, true);
           }
-        }, hitStopDuration);
+        }
         
         stunnedUntil.current = now + STUN_DURATION_MAJOR;
         stunState.current = "FALL";
       } else if (severity === "medium") {
-        const hitStopDuration = thresholdsRef.current.hitStopMediumMs; // Configurable freeze
-        hitStopUntil.current = now + hitStopDuration;
         triggerShake(shakeConfigRef.current.mediumIntensity, shakeConfigRef.current.mediumDuration);
         
-        activeRecoilTimeout.current = setTimeout(() => {
-          if (bodyRef.current) {
-            if (isFrontal) {
-              bodyRef.current.setLinvel({ x: -forwardDir.x * 25, y: currentYVel, z: -forwardDir.z * 25 }, true);
-            } else {
-              const currentVel = bodyRef.current.linvel();
-              bodyRef.current.setLinvel({ x: currentVel.x * 0.5, y: currentYVel, z: currentVel.z * 0.5 }, true);
-            }
+        // Apply recoil impulse immediately
+        if (bodyRef.current) {
+          if (isFrontal) {
+            bodyRef.current.setLinvel({ x: -forwardDir.x * 25, y: currentYVel, z: -forwardDir.z * 25 }, true);
+          } else {
+            const currentVel = bodyRef.current.linvel();
+            bodyRef.current.setLinvel({ x: currentVel.x * 0.5, y: currentYVel, z: currentVel.z * 0.5 }, true);
           }
-        }, hitStopDuration);
+        }
         stunnedUntil.current = now + STUN_DURATION_MEDIUM;
         stunState.current = "STUMBLE";
       } else {
         triggerShake(shakeConfigRef.current.minorIntensity, shakeConfigRef.current.minorDuration);
-        activeRecoilTimeout.current = setTimeout(() => {
-          if (bodyRef.current) {
-            if (isFrontal) {
-              bodyRef.current.setLinvel({ x: -forwardDir.x * 15, y: currentYVel, z: -forwardDir.z * 15 }, true);
-            } else {
-              const currentVel = bodyRef.current.linvel();
-              bodyRef.current.setLinvel({ x: currentVel.x * 0.8, y: currentYVel, z: currentVel.z * 0.8 }, true);
-            }
+        // Apply recoil impulse immediately
+        if (bodyRef.current) {
+          if (isFrontal) {
+            bodyRef.current.setLinvel({ x: -forwardDir.x * 15, y: currentYVel, z: -forwardDir.z * 15 }, true);
+          } else {
+            const currentVel = bodyRef.current.linvel();
+            bodyRef.current.setLinvel({ x: currentVel.x * 0.8, y: currentYVel, z: currentVel.z * 0.8 }, true);
           }
-        }, 10);
+        }
         stunnedUntil.current = now + STUN_DURATION_MINOR;
         stunState.current = "STUMBLE";
       }
