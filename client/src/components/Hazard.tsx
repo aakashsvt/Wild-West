@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { RigidBody, CuboidCollider, type RapierRigidBody, interactionGroups } from "@react-three/rapier";
 import * as THREE from "three";
+import { getPlayerJumping, getPlayerJumpHeight } from "./player/playerBody";
 
 export type HazardSeverity = "minor" | "medium" | "major";
 
@@ -30,6 +31,12 @@ export function Hazard({
   const handleCollision = (e: any) => {
     // 1) Check if the collided object is the player
     if (e.other.rigidBodyObject?.name !== "player") return;
+    
+    // Check if the player successfully jumped over this generic hazard!
+    if (getPlayerJumping() && getPlayerJumpHeight() > size[1] * 0.5) {
+      console.log(`Successfully cleared hazard! Jump height: ${getPlayerJumpHeight().toFixed(2)} | Hazard height: ${size[1]}`);
+      return;
+    }
     
     // 2) Get exactly where on the Hazard the player hit (world space)
     let impactPoint = new THREE.Vector3(...position);
