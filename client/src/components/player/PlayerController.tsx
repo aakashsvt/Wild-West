@@ -36,6 +36,7 @@ import { usePlayerNetwork } from './usePlayerNetwork';
 import { useControls, button } from "leva";
 import { usePlayerStateMachine } from './usePlayerStateMachine';
 import { usePlayerImpacts } from './usePlayerImpacts';
+import { setPlayerBody } from './playerBody';
 
 type Props = {
   playerRef: React.MutableRefObject<RapierRigidBody | null>;
@@ -145,6 +146,8 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
 
   useEffect(() => {
     playerRef.current = body.current;
+    setPlayerBody(body.current);
+    return () => setPlayerBody(null);
   }, [playerRef]);
 
   useDustTrail(horseRef, body);

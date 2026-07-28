@@ -63,6 +63,7 @@ export function usePlayerImpacts(
                         impactAngle === "main-body";
 
       if (impactAngle === "hurdle") {
+        console.log("Collided with hurdle");
         if (currentAnimationName.current === "JUMP") {
           // If jumping, just shake camera and queue the stumble for when they land
           pendingStumble.current = true;
@@ -77,6 +78,7 @@ export function usePlayerImpacts(
       }
 
       // HEAD-ON CRASH LOGIC
+      console.log(`Collided with obstacle (severity: ${severity}, angle: ${impactAngle})`);
       if (severity === "major") {
         triggerShake(shakeConfigRef.current.majorIntensity, shakeConfigRef.current.majorDuration);
         
