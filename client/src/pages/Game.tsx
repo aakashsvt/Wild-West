@@ -21,6 +21,7 @@ import { Loader2 } from "lucide-react";
 import { Link, Redirect } from "wouter";
 import { PostProcessingPipeline } from "@/components/PostProcessingPipeline";
 import { DamageOverlay } from "@/components/DamageOverlay";
+import { EyeBlinkOverlay } from "@/components/EyeBlinkOverlay";
 import { ImpactVFXManager } from "@/components/ImpactVFXManager";
 
 // ── Western palette — matches Home and LoadingScreen ─────────────────────────
@@ -298,6 +299,12 @@ export default function Game() {
           ✦ Exit Race
         </Link>
       </div>
+
+      <DamageOverlay />
+      <EyeBlinkOverlay />
+      <GameHUD />
+      <GameOverModal />
+      <TouchControls />
 
       <KeyboardControls map={keyboardMap}>
         <Canvas shadows camera={{ position: [0, 5, 10], fov: 60, near: 0.05 }} gl={{

@@ -144,6 +144,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
 
   const stunState = useRef<"NONE" | "FALL" | "STUMBLE" | "STUMBLE_SIDE" | "KICKED">("NONE");
   const pendingStumble = useRef(false);
+  const wasStunnedLastFrame = useRef<string>("NONE");
 
   useEffect(() => {
     playerRef.current = body.current;
@@ -223,6 +224,14 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
     const isStunned = stunnedUntil.current > now;
     if (!isStunned) stunState.current = "NONE";
     const currentStunState = isStunned ? stunState.current : "NONE";
+    
+    if (currentStunState === "FALL" && wasStunnedLastFrame.current !== "FALL") {
+      window.dispatchEvent(new CustomEvent("player-unconscious", { detail: true }));
+    } else if (currentStunState !== "FALL" && wasStunnedLastFrame.current === "FALL") {
+      window.dispatchEvent(new CustomEvent("player-unconscious", { detail: false }));
+    }
+    wasStunnedLastFrame.current = currentStunState;
+
     const keys = getKeys();
     const isBoosting = keys.forward && keys.boost;
 
