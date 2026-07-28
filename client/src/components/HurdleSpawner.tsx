@@ -28,8 +28,8 @@ export function HurdleSpawner() {
     const items = [];
     const points = trackPoints.map((p) => new THREE.Vector3(p.x, p.y, p.z));
     
-    // Spawn a hurdle every 5 spline points for maximum density!
-    for (let i = 8; i < points.length - 8; i += 5) {
+    // Spawn a hurdle every 3 spline points (increased from 5 for more density!)
+    for (let i = 8; i < points.length - 8; i += 3) {
       const p1 = points[i];
       const p2 = points[i + 1];
       
@@ -38,15 +38,19 @@ export function HurdleSpawner() {
       // Calculate angle for the hurdle so it sits perpendicular to the track direction
       const angle = Math.atan2(dir.x, dir.z); // Using x/z because we want Y rotation
       
+      // Randomize hurdle height between 70% and 130% of the base Leva height control
+      const randomHeight = height * (0.7 + Math.random() * 0.6);
+      
       items.push({
         baseY: p1.y,
         position: [p1.x + TRACK_OFFSET, p1.y, p1.z + offsetz] as [number, number, number],
         rotation: [0, angle, 0] as [number, number, number],
+        individualHeight: randomHeight,
       });
     }
     
     return items;
-  }, [resetKey]);
+  }, [resetKey, height]);
 
   return (
     <>
@@ -56,7 +60,7 @@ export function HurdleSpawner() {
           position={[obs.position[0], obs.baseY + yOffset, obs.position[2]]} 
           rotation={obs.rotation} 
           width={width}
-          height={height}
+          height={obs.individualHeight}
           thickness={thickness}
         />
       ))}
