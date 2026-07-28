@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import * as THREE from "three";
 import { Obstacle } from "./Obstacle";
 import trackPointsData from "../../public/models/spline.json";
@@ -12,6 +12,13 @@ const TRACK_OFFSET = 410;
 const offsetz = 20;
 
 export function ObstacleSpawner() {
+  const [resetKey, setResetKey] = useState(0);
+
+  useEffect(() => {
+    const handleReset = () => setResetKey((k) => k + 1);
+    window.addEventListener("reset-obstacles", handleReset);
+    return () => window.removeEventListener("reset-obstacles", handleReset);
+  }, []);
   const { yOffset, scaleMultiplier } = useControls("Obstacles", {
     yOffset: { value: 0.0, min: -10, max: 20, step: 0.1 },
     scaleMultiplier: { value: 4.0, min: 0.1, max: 10.0, step: 0.1 }
@@ -50,7 +57,7 @@ export function ObstacleSpawner() {
     }
     
     return items;
-  }, []);
+  }, [resetKey]);
 
   return (
     <>

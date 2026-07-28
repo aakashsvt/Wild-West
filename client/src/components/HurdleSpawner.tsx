@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import * as THREE from "three";
 import { Hurdle } from "./Hurdle";
 import trackPointsData from "../../public/models/spline.json";
@@ -10,6 +10,13 @@ const TRACK_OFFSET = 410;
 const offsetz = 20;
 
 export function HurdleSpawner() {
+  const [resetKey, setResetKey] = useState(0);
+
+  useEffect(() => {
+    const handleReset = () => setResetKey((k) => k + 1);
+    window.addEventListener("reset-obstacles", handleReset);
+    return () => window.removeEventListener("reset-obstacles", handleReset);
+  }, []);
   const { yOffset, width, height, thickness } = useControls("Hurdles", {
     yOffset: { value: 2.0, min: -10, max: 20, step: 0.1 },
     width: { value: 12.0, min: 2.0, max: 40.0, step: 0.1 },
@@ -39,7 +46,7 @@ export function HurdleSpawner() {
     }
     
     return items;
-  }, []);
+  }, [resetKey]);
 
   return (
     <>

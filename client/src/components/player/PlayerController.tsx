@@ -194,6 +194,25 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
   const { updateStateMachine, transitioningToRun, walk2RunStartedAt } = usePlayerStateMachine(playAnimation);
 
 
+  useControls("Debug Actions", {
+    "Reset Player Position": button(() => {
+      if (body.current) {
+        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, PLAYER_START_ROTATION_Y, 0));
+        body.current.setTranslation({ x: PLAYER_START_POSITION[0], y: PLAYER_START_POSITION[1], z: PLAYER_START_POSITION[2] }, true);
+        body.current.setRotation(q, true);
+        body.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        body.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
+        stunnedUntil.current = 0;
+        stunState.current = "NONE";
+        console.log("Player position reset to spawn");
+      }
+    }),
+    "Reset Obstacles": button(() => {
+      window.dispatchEvent(new CustomEvent("reset-obstacles"));
+      console.log("Obstacles and hurdles reset");
+    }),
+  });
+
   usePlayerImpacts(body, stunnedUntil, stunState, triggerShake, shakeConfigRef, currentAnimationName, pendingStumble);
 
   useFrame((state, delta) => {
