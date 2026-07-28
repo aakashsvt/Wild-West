@@ -85,7 +85,7 @@ function bakeMorphTargets(geometry: THREE.BufferGeometry, weights: number[]) {
 
 function Walls() {
   return (
-    <>
+    <RigidBody type="fixed">
       {points.map((p1, i) => {
         if (i === points.length - 1) return null;
 
@@ -93,45 +93,30 @@ function Walls() {
 
         const dir = new THREE.Vector3().subVectors(p2, p1);
         const length = dir.length();
-
         const mid = p1.clone().add(p2).multiplyScalar(0.5);
-
         const angle = Math.atan2(dir.z, dir.x);
-
         const normal = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
 
         const left = mid.clone().add(normal.clone().multiplyScalar(40));
         const right = mid.clone().add(normal.clone().multiplyScalar(-40));
 
+        // Use half-extents for Rapier colliders (length / 2)
         return (
           <group key={i}>
-            <RigidBody type="fixed">
-              <CuboidCollider
-                args={[length, 50, 0.5]}
-                position={[left.x + TRACK_OFFSET, left.y + 10, left.z + offsetz]}
-                rotation={[0, -angle, 0]}
-              />
-              <mesh visible={false} position={[left.x + TRACK_OFFSET, left.y + 10, left.z + offsetz]} rotation={[0, -angle, 0]}>
-                <boxGeometry args={[length, 50, 1]} />
-                <meshBasicMaterial color="none" wireframe />
-              </mesh>
-            </RigidBody>
-
-            <RigidBody type="fixed">
-              <CuboidCollider
-                args={[length, 50, 0.5]}
-                position={[right.x + TRACK_OFFSET, right.y + 10, right.z + offsetz]}
-                rotation={[0, -angle, 0]}
-              />
-              <mesh visible={false} position={[right.x + TRACK_OFFSET, right.y + 10, right.z + offsetz]} rotation={[0, -angle, 0]}>
-                <boxGeometry args={[length, 50, 1]} />
-                <meshBasicMaterial color="none" wireframe />
-              </mesh>
-            </RigidBody>
+            <CuboidCollider
+              args={[length / 2, 25, 0.25]}
+              position={[left.x + TRACK_OFFSET, left.y + 10, left.z + offsetz]}
+              rotation={[0, -angle, 0]}
+            />
+            <CuboidCollider
+              args={[length / 2, 25, 0.25]}
+              position={[right.x + TRACK_OFFSET, right.y + 10, right.z + offsetz]}
+              rotation={[0, -angle, 0]}
+            />
           </group>
         );
       })}
-    </>
+    </RigidBody>
   );
 }
 // Brightness (a plain RGB multiplier) can't be tuned independently of perceived

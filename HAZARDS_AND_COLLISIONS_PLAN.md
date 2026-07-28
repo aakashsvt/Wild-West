@@ -108,3 +108,15 @@ As of the current implementation, we have successfully architected and built the
 - **3D Particle VFX (`ImpactVFXManager.tsx`)**: Built a zero-garbage, high-performance particle system using `THREE.InstancedMesh`. Smashing hurdles triggers an explosion of 50 wooden splinters, while crashing into major obstacles blasts 35 chunks of dirt/rock debris. Particles possess full simulated gravity and rotational velocity, lingering for ~1.5s before rapidly shrinking away.
 
 *(Future VFX and Audio tasks have been migrated to `FUTURE_VFX_PLAN.md`)*
+
+## Progress Checkpoint 4 (Completed Today)
+
+- **Removed Hit-Stop Mechanics**: Removed the engine-level freeze frame (time dilation) from all minor, medium, and major obstacle collisions. Recoil forces now apply instantly for smoother pacing.
+- **Collision Balance**: Reduced the backward recoil physical force on major head-on collisions by 30%.
+- **Hurdle Dual-Detection Physics**: Fixed a bug where Rapier's discrete `onIntersectionEnter` sensors would fail to register slow-moving horses. Built a `useFrame` AABB distance-overlap fallback to guarantee detection at a crawl.
+- **Global Player Singleton**: Created a highly performant `playerBody.ts` module singleton to store the player's `RigidBody` and real-time state, bypassing deep React prop threading.
+- **Dynamic Jump Height Collisions**: Resolved an issue where jumping was purely cosmetic and still resulted in crashes. The physics engine now reads the exact, millisecond-accurate `jumpHeight` of the saddle from the animation curve. If the horse's vertical height clears 50% of the hurdle's physical height, the collision is seamlessly bypassed for a clean jump. Jumping too early/late accurately results in a crash.
+- **Procedural Hurdle Variation**: Increased the spawn density of hurdles on the track and added procedural height randomization (between 70% and 130% of the base size).
+- **Debug Utilities**: Added a new Leva UI panel with buttons to "Reset Player Position" (teleport back to spawn) and "Reset Obstacles" (remounts the physics track).
+- **Custom WebGL Profiling**: Built a custom `DrawCallOverlay` to accurately profile GPU performance. It safely hooks into the core `WebGLRenderer` to accumulate the true sum of Draw Calls and Triangles across *all* Post-Processing passes, overcoming a bug where Three.js resets the counter per-pass.
+- **Massive Physics & React Optimization (Walls)**: Completely rewrote the `Track1.tsx` terrain boundary generation. Consolidated **600 distinct RigidBodies** into **1 single Fixed RigidBody** utilizing compound mathematical colliders. Completely deleted 600 invisible WebGL meshes that were pointlessly taxing the JS Heap and React reconciler. This eliminated the massive CPU bottleneck and locked in smooth FPS.
