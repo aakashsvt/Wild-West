@@ -64,6 +64,14 @@ export function usePlayerImpacts(
 
       if (impactAngle === "hurdle") {
         console.log("Collided with hurdle");
+        
+        // If the horse is just walking (below minor speed threshold), don't play the stumble.
+        // The hurdle will still fall over, but the player pushes through it unaffected!
+        if (impactVelocity < thresholdsRef.current.minorSpeed) {
+          console.log("Hurdle hit at walking speed - ignoring stumble.");
+          return;
+        }
+
         // Jump state is checked at the hazard source, so any event reaching here is a true hit.
         stunnedUntil.current = now + STUN_DURATION_HURDLE;
         stunState.current = "STUMBLE_SIDE";
