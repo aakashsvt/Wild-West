@@ -64,16 +64,10 @@ export function usePlayerImpacts(
 
       if (impactAngle === "hurdle") {
         console.log("Collided with hurdle");
-        if (currentAnimationName.current === "JUMP") {
-          // If jumping, just shake camera and queue the stumble for when they land
-          pendingStumble.current = true;
-          triggerShake(shakeConfigRef.current.minorIntensity * 1.5, shakeConfigRef.current.minorDuration * 1.2);
-        } else {
-          // If running, stumble immediately with camera shake
-          stunnedUntil.current = now + STUN_DURATION_HURDLE;
-          stunState.current = "STUMBLE_SIDE";
-          triggerShake(shakeConfigRef.current.minorIntensity * 1.5, shakeConfigRef.current.minorDuration * 1.2);
-        }
+        // Jump state is checked at the hazard source, so any event reaching here is a true hit.
+        stunnedUntil.current = now + STUN_DURATION_HURDLE;
+        stunState.current = "STUMBLE_SIDE";
+        triggerShake(shakeConfigRef.current.minorIntensity * 1.5, shakeConfigRef.current.minorDuration * 1.2);
         return; // Skip the rest of the frontal/obstacle logic
       }
 

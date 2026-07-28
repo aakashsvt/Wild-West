@@ -111,6 +111,7 @@ export function usePlayerAnimations(horseRef: React.MutableRefObject<any>) {
     playAnimation,
     currentAnimationName,
     currentOverlayName,
+    currentBaseAction,
     lastKickedAt,
     collisionHitsDuringOverlay
   };

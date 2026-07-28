@@ -36,7 +36,8 @@ import { usePlayerNetwork } from './usePlayerNetwork';
 import { useControls, button } from "leva";
 import { usePlayerStateMachine } from './usePlayerStateMachine';
 import { usePlayerImpacts } from './usePlayerImpacts';
-import { setPlayerBody } from './playerBody';
+import { setPlayerBody, setPlayerJumping, setPlayerJumpHeight } from './playerBody';
+import { jumpCameraBobOffset } from './constants';
 
 type Props = {
   playerRef: React.MutableRefObject<RapierRigidBody | null>;
@@ -190,7 +191,7 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
     riderWidth: { value: 1.2, min: 0.1, max: 2.0, step: 0.01 },
   });
   const { updateNetwork } = usePlayerNetwork();
-  const { playAnimation, currentAnimationName, currentOverlayName, collisionHitsDuringOverlay, lastKickedAt } = usePlayerAnimations(horseRef);
+  const { playAnimation, currentAnimationName, currentOverlayName, collisionHitsDuringOverlay, lastKickedAt, currentBaseAction } = usePlayerAnimations(horseRef);
   const { updateStateMachine, transitioningToRun, walk2RunStartedAt } = usePlayerStateMachine(playAnimation);
 
 
@@ -229,6 +230,11 @@ export function PlayerController({ playerRef, isFirstPersonRef }: Props) {
     // DEQUEUE PENDING STUMBLE (After Jump Lands)
     // ==========================================
     const isJumping = currentAnimationName.current === "JUMP";
+    const jumpTime = isJumping && currentBaseAction.current ? currentBaseAction.current.time : 0;
+    const jumpHeight = isJumping ? jumpCameraBobOffset(jumpTime) : 0;
+    
+    setPlayerJumping(isJumping);
+    setPlayerJumpHeight(jumpHeight);
     if (pendingStumble.current && !isJumping && !isStunned) {
       pendingStumble.current = false;
       stunnedUntil.current = now + 1000;

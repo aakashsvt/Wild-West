@@ -3,7 +3,7 @@ import { RigidBody, CuboidCollider } from "@react-three/rapier";
 import type { RapierRigidBody } from "@react-three/rapier";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { getPlayerBody } from "./player/playerBody";
+import { getPlayerBody, getPlayerJumping, getPlayerJumpHeight } from "./player/playerBody";
 
 type HurdleProps = {
   position: [number, number, number];
@@ -35,6 +35,15 @@ export function Hurdle({ position, rotation = [0, 0, 0], width = 4, height = 1.2
 
   const dispatchHurdleImpact = (playerVelocity: { x: number; y: number; z: number }) => {
     if (hasBeenHit.current) return;
+    
+    // If the player is jumping, they clear the hurdle perfectly without triggering it
+    // BUT only if their current vertical jump height is high enough to clear the hurdle's physical height!
+    // We use a forgiving threshold (e.g. 50% of the hurdle's height) since the horse tucks its legs.
+    if (getPlayerJumping() && getPlayerJumpHeight() > height * 0.5) {
+      console.log("Successfully cleared hurdle! Jump height:", getPlayerJumpHeight());
+      return;
+    }
+
     hasBeenHit.current = true;
     setIsFalling(true);
 
